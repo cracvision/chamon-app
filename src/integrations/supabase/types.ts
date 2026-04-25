@@ -14,7 +14,442 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      areas: {
+        Row: {
+          code: string | null
+          color: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          id: string
+          name: string
+          sort_order: number
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          code?: string | null
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: string
+          name: string
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          code?: string | null
+          color?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: string
+          name?: string
+          sort_order?: number
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      attachments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          file_size: number | null
+          filename: string
+          id: string
+          mime_type: string | null
+          mission_id: string | null
+          storage_path: string
+          task_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          file_size?: number | null
+          filename: string
+          id?: string
+          mime_type?: string | null
+          mission_id?: string | null
+          storage_path: string
+          task_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          file_size?: number | null
+          filename?: string
+          id?: string
+          mime_type?: string | null
+          mission_id?: string | null
+          storage_path?: string
+          task_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attachments_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "missions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "attachments_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contacts: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          email: string | null
+          id: string
+          name: string
+          notes: string | null
+          phone: string | null
+          role: string | null
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          email?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          email?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          role?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      events: {
+        Row: {
+          action: string
+          created_at: string
+          entity_id: string
+          entity_type: string
+          id: string
+          metadata: Json | null
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          entity_id: string
+          entity_type: string
+          id?: string
+          metadata?: Json | null
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          entity_id?: string
+          entity_type?: string
+          id?: string
+          metadata?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      missions: {
+        Row: {
+          area_id: string | null
+          code: string | null
+          completed_at: string | null
+          cost_of_inaction_weekly: number
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          description: string | null
+          due_date: string | null
+          health: string | null
+          id: string
+          priority: string
+          reward_text: string | null
+          sort_order: number
+          status: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          area_id?: string | null
+          code?: string | null
+          completed_at?: string | null
+          cost_of_inaction_weekly?: number
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          health?: string | null
+          id?: string
+          priority?: string
+          reward_text?: string | null
+          sort_order?: number
+          status?: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          area_id?: string | null
+          code?: string | null
+          completed_at?: string | null
+          cost_of_inaction_weekly?: number
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          health?: string | null
+          id?: string
+          priority?: string
+          reward_text?: string | null
+          sort_order?: number
+          status?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "missions_area_id_fkey"
+            columns: ["area_id"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          email_to: string | null
+          error: string | null
+          id: string
+          sent_at: string
+          status: string
+          subject: string | null
+          task_id: string | null
+          type: string
+          user_id: string
+        }
+        Insert: {
+          email_to?: string | null
+          error?: string | null
+          id?: string
+          sent_at?: string
+          status: string
+          subject?: string | null
+          task_id?: string | null
+          type: string
+          user_id: string
+        }
+        Update: {
+          email_to?: string | null
+          error?: string | null
+          id?: string
+          sent_at?: string
+          status?: string
+          subject?: string | null
+          task_id?: string | null
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          digest_enabled: boolean
+          digest_hour: number
+          email: string | null
+          full_name: string | null
+          id: string
+          notification_email: string | null
+          preferred_language: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          digest_enabled?: boolean
+          digest_hour?: number
+          email?: string | null
+          full_name?: string | null
+          id: string
+          notification_email?: string | null
+          preferred_language?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          digest_enabled?: boolean
+          digest_hour?: number
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          notification_email?: string | null
+          preferred_language?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      task_contacts: {
+        Row: {
+          contact_id: string
+          created_at: string
+          task_id: string
+          user_id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          task_id: string
+          user_id: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          task_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "task_contacts_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "task_contacts_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tasks: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          due_date: string | null
+          effort_minutes: number | null
+          friction_level: number
+          id: string
+          is_today: boolean
+          mission_id: string
+          notes: string | null
+          sort_order: number
+          status: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          due_date?: string | null
+          effort_minutes?: number | null
+          friction_level?: number
+          id?: string
+          is_today?: boolean
+          mission_id: string
+          notes?: string | null
+          sort_order?: number
+          status?: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          due_date?: string | null
+          effort_minutes?: number | null
+          friction_level?: number
+          id?: string
+          is_today?: boolean
+          mission_id?: string
+          notes?: string | null
+          sort_order?: number
+          status?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_mission_id_fkey"
+            columns: ["mission_id"]
+            isOneToOne: false
+            referencedRelation: "missions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
