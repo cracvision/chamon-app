@@ -455,7 +455,21 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      chamon_search: {
+        Args: { _limit?: number; _query: string; _user_id: string }
+        Returns: {
+          due_date: string
+          entity_type: string
+          id: string
+          mission_id: string
+          similarity: number
+          snippet: string
+          status: string
+          title: string
+        }[]
+      }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
       [_ in never]: never
