@@ -78,7 +78,9 @@ Deno.serve(async (req) => {
         });
         break;
       case "what_needs_attention":
-        result = await handleWhatNeedsAttention(supabase, userId);
+        result = await handleWhatNeedsAttention(supabase, userId, {
+          limit: typeof params.limit === "number" ? params.limit : undefined,
+        });
         break;
       case "overdue":
         result = await handleOverdue(supabase, userId);
