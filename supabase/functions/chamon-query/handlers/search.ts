@@ -14,7 +14,8 @@ export async function handleSearch(
   if (q.length < 2) return { count: 0, items: [], message: MSG.empty.search };
   const limit = Math.max(1, Math.min(20, params.limit ?? 10));
 
-  const { data, error } = await supabase.rpc("chamon_search", {
+  // deno-lint-ignore no-explicit-any
+  const { data, error } = await (supabase as any).rpc("chamon_search", {
     _user_id: userId,
     _query: q,
     _limit: limit,
