@@ -2,7 +2,7 @@ import { useEffect } from "react";
 
 const SCRIPT_ID = "elevenlabs-convai-embed";
 const SCRIPT_SRC = "https://unpkg.com/@elevenlabs/convai-widget-embed";
-const AGENT_ID = "agent_5901ke9dw1ggfxhb7kg0kcvdgkvd";
+const AGENT_ID = "agent_2201kq54z9ayfh7re29htczqe010";
 
 declare module "react" {
   namespace JSX {
