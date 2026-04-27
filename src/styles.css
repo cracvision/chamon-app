@@ -189,3 +189,11 @@
   70%  { box-shadow: 0 0 0 8px color-mix(in oklch, currentColor 0%, transparent); }
   100% { box-shadow: 0 0 0 0 color-mix(in oklch, currentColor 0%, transparent); }
 }
+
+/* Lift ElevenLabs floating widget above mobile bottom nav */
+@media (max-width: 1023px) {
+  elevenlabs-convai {
+    --el-convai-bottom-offset: 80px;
+    margin-bottom: 64px;
+  }
+}

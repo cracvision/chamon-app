@@ -4,7 +4,7 @@ const SCRIPT_ID = "elevenlabs-convai-embed";
 const SCRIPT_SRC = "https://unpkg.com/@elevenlabs/convai-widget-embed";
 const AGENT_ID = "agent_5901ke9dw1ggfxhb7kg0kcvdgkvd";
 
-declare global {
+declare module "react" {
   namespace JSX {
     interface IntrinsicElements {
       "elevenlabs-convai": React.DetailedHTMLProps<
