@@ -6,6 +6,7 @@ import { Radar, LayoutDashboard, Sun, Calendar, Users, Settings, LogOut, Plus, A
 import { LangToggle } from "@/components/LangToggle";
 import { Button } from "@/components/ui/button";
 import { QuickAddDialog } from "@/components/QuickAddDialog";
+import { ChamonVoiceWidget } from "@/components/ChamonVoiceWidget";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthLayout,
@@ -116,6 +117,7 @@ function AuthLayout() {
       </div>
 
       <QuickAddDialog open={quickOpen} onOpenChange={setQuickOpen} />
+      <ChamonVoiceWidget />
     </div>
   );
 }
