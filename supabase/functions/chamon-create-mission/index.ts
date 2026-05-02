@@ -101,7 +101,20 @@ Deno.serve(async (req) => {
 
   let parsed: Parsed;
   try {
-    parsed = CreateMissionSchema.parse(rawBody ? JSON.parse(rawBody) : {});
+    const body = rawBody ? JSON.parse(rawBody) : {};
+    // ElevenLabs sends all params as strings. Coerce nullable/numeric fields.
+    if (body && typeof body === "object") {
+      if (typeof body.due_date === "string" && (body.due_date === "null" || body.due_date === "")) {
+        body.due_date = null;
+      }
+      if (typeof body.description === "string" && body.description === "null") body.description = null;
+      if (typeof body.reward_text === "string" && body.reward_text === "null") body.reward_text = null;
+      if (typeof body.cost_of_inaction_weekly === "string") {
+        const n = Number(body.cost_of_inaction_weekly);
+        if (Number.isFinite(n)) body.cost_of_inaction_weekly = n;
+      }
+    }
+    parsed = CreateMissionSchema.parse(body);
   } catch (e) {
     return json(
       { ok: false, error: MSG.badRequest, reason: e instanceof z.ZodError ? "validation" : "invalid_json" },

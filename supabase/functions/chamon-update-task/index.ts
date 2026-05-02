@@ -35,6 +35,23 @@ const UpdateTaskSchema = z.discriminatedUnion("field", [
 
 type Parsed = z.infer<typeof UpdateTaskSchema>;
 
+// ElevenLabs server tools serialize all params as strings. Coerce `value`
+// to its native type based on `field` BEFORE Zod parse. Defensive: if the
+// string doesn't match an expected literal, leave it so Zod fails loudly.
+function coerceValue(field: unknown, value: unknown): unknown {
+  if (typeof value !== "string") return value;
+  if (field === "is_today") {
+    if (value === "true") return true;
+    if (value === "false") return false;
+    return value;
+  }
+  if (field === "due_date") {
+    if (value === "null" || value === "") return null;
+    return value;
+  }
+  return value;
+}
+
 function buildMessage(field: string, newValue: unknown, taskTitle: string): string {
   if (field === "status") {
     if (newValue === "done") return `Hecho. Marqué ${taskTitle} como completada.`;
@@ -70,7 +87,11 @@ Deno.serve(async (req) => {
 
   let parsed: Parsed;
   try {
-    parsed = UpdateTaskSchema.parse(rawBody ? JSON.parse(rawBody) : {});
+    const raw = rawBody ? JSON.parse(rawBody) : {};
+    if (raw && typeof raw === "object") {
+      raw.value = coerceValue(raw.field, raw.value);
+    }
+    parsed = UpdateTaskSchema.parse(raw);
   } catch (e) {
     return json(
       {
