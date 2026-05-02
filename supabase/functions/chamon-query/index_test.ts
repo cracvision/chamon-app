@@ -152,4 +152,4 @@ Deno.test({ name: "Bearer 5: HMAC headers take precedence over Bearer", ignore: 
   const json = await res.json();
   assertEquals(res.status, 401);
   assertEquals(json.reason, "bad_signature");
-});
+}});
