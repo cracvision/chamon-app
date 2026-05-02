@@ -2,3 +2,12 @@ project_id = "yvfkkdvhizjdpouoewch"
 
 [functions.chamon-query]
 verify_jwt = false
+
+[functions.chamon-create-task]
+verify_jwt = false
+
+[functions.chamon-create-mission]
+verify_jwt = false
+
+[functions.chamon-update-task]
+verify_jwt = false

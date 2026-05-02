@@ -101,12 +101,25 @@ All times are `America/Puerto_Rico` (UTC-4, no DST).
 
 Errors: `{ "error": "<spanish message>", "reason"?: "<machine code>" }` with appropriate HTTP status (400/401/500).
 
-## Security architecture
+## Security boundary
 
-1. **HMAC verification** — all routes (except OPTIONS) require valid signature.
-2. **Service role + scopedTable wrapper** — `client.ts` exports `scopedTable()`, the **only** allowed DB-access path in handlers. It hard-filters every read by `user_id = userId AND deleted_at IS NULL`.
-3. **Search exception** — `handlers/search.ts` calls the `chamon_search` SQL function, which hardcodes the same filters in its body (see migration). This is the documented exception.
-4. **Verification** — `rg "supabase\.from\(" supabase/functions/chamon-query/handlers/` must return zero matches.
+This function authenticates to the database with `SUPABASE_SERVICE_ROLE_KEY`,
+which **bypasses all RLS policies**. The actual enforcement of per-user data
+isolation is the `scopedTable()` wrapper in `_shared/client.ts`, which
+auto-applies `.eq("user_id", CHAMON_USER_ID)` and `.is("deleted_at", null)`
+to every query.
+
+Hard rule: no handler in this function may call `supabase.from(...)` directly.
+Verify with: `rg "supabase\.from\(" supabase/functions/chamon-query/handlers/`
+→ must return zero matches.
+
+RLS policies on the underlying tables exist as defense-in-depth for the
+*frontend* path (which uses the publishable key + user JWT), not for this
+Edge Function path.
+
+The `handlers/search.ts` exception calls the `chamon_search` SQL function,
+which hardcodes the same `user_id` + `deleted_at IS NULL` filters in its
+body (see migration). Documented and intentional.
 
 ## File tree
 

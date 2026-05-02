@@ -42,6 +42,44 @@ export function statusEs(s: string): string {
   } as Record<string, string>)[s] ?? s;
 }
 
+// Status phrasing used in WRITE-tool confirmation messages (Sprint 2).
+// Distinct from `statusEs` so we don't change existing query phrasing
+// ("doing" → "en curso") that Carlos already hears today.
+export function statusEsWrite(s: string): string {
+  return ({
+    todo: "pendiente",
+    doing: "en progreso",
+    waiting: "esperando",
+    done: "completada",
+  } as Record<string, string>)[s] ?? s;
+}
+
+const WEEKDAYS_ES = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"];
+const MONTHS_ES = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+];
+
+/**
+ * Format a YYYY-MM-DD date for voice output.
+ *   today    → "hoy"
+ *   tomorrow → "mañana"
+ *   else     → "el viernes 30 de abril"
+ */
+export function formatDateEs(iso: string | null | undefined): string {
+  if (!iso) return "sin fecha";
+  const n = daysFromToday(iso);
+  if (n === 0) return "hoy";
+  if (n === 1) return "mañana";
+  const d = new Date(iso + "T00:00:00");
+  return `el ${WEEKDAYS_ES[d.getDay()]} ${d.getDate()} de ${MONTHS_ES[d.getMonth()]}`;
+}
+
+/** Round to whole dollars for voice. 87.5 → "$88". */
+export function formatDollars(n: number): string {
+  return `$${Math.round(n)}`;
+}
+
 export const MSG = {
   unauthorized: "Firma inválida o ausente.",
   badRequest: "Solicitud mal formada.",
