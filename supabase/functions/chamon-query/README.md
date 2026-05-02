@@ -10,7 +10,9 @@ POST https://yvfkkdvhizjdpouoewch.supabase.co/functions/v1/chamon-query
 
 ## Authentication
 
-Every request must carry two headers:
+The function accepts **two auth modes**, checked in order:
+
+### Mode 1: HMAC-SHA256 (primary — CLI, scripts, internal tests)
 
 | Header | Value |
 |---|---|
@@ -19,7 +21,56 @@ Every request must carry two headers:
 
 - Replay window: **5 minutes** (`abs(now - ts) > 300` → 401 `stale_timestamp`).
 - Signature mismatch → 401 `bad_signature`.
-- Missing headers → 401 `missing_headers`.
+- If either HMAC header is present, HMAC is enforced (Bearer is ignored).
+
+### Mode 2: Bearer token (for ElevenLabs Server Tools)
+
+ElevenLabs Server Tools cannot sign request bodies dynamically, so we accept a static Bearer token as a fallback.
+
+| Header | Value |
+|---|---|
+| `Authorization` | `Bearer <CHAMON_ELEVENLABS_BEARER>` |
+
+- Used **only** when no `x-chamon-*` headers are present.
+- No replay protection, no IP allowlist (ElevenLabs does not publish static outbound IPs for Server Tools).
+- Token must be **rotated every 90 days** — see procedure below.
+- Threat model: read-only, single-user backend. A leaked token grants read access to Carlos's missions/tasks; no write paths exist.
+
+### Errors
+
+| `reason` | Mode | Meaning |
+|---|---|---|
+| `missing_headers` | both | No HMAC headers and no Authorization header |
+| `bad_timestamp` / `stale_timestamp` / `bad_signature` | hmac | HMAC verification failed |
+| `bad_auth_scheme` / `empty_bearer` / `bad_bearer` | bearer | Bearer verification failed |
+
+### Bearer rotation procedure (every 90 days)
+
+1. Generate a new high-entropy token: `openssl rand -hex 32`
+2. Update the `CHAMON_ELEVENLABS_BEARER` secret in Lovable Cloud → Connectors → Secrets.
+3. Update the static header in the ElevenLabs agent's Server Tool configuration:
+   - Header name: `Authorization`
+   - Header value: `Bearer <new-token>`
+4. Trigger a test conversation in the ElevenLabs agent to confirm 200 responses.
+5. Record rotation date in your ops log.
+
+### Sample ElevenLabs Server Tool request
+
+```http
+POST /functions/v1/chamon-query HTTP/1.1
+Host: yvfkkdvhizjdpouoewch.supabase.co
+Content-Type: application/json
+Authorization: Bearer <CHAMON_ELEVENLABS_BEARER>
+
+{ "query_type": "today_focus" }
+```
+
+### Troubleshooting
+
+- **401 `bad_bearer`** — the token in ElevenLabs does not match the secret in Lovable Cloud.
+- **401 `bad_auth_scheme`** — the Authorization header value does not start with `Bearer `.
+- **401 `missing_headers` from ElevenLabs** — the Server Tool is not sending any auth header.
+- **401 `bad_signature` from ElevenLabs** — ElevenLabs sent a stale `x-chamon-*` header alongside Bearer; strip HMAC headers from the tool config.
 
 User identity is **not** carried in the request. The function pulls `CHAMON_USER_ID` from its environment (Carlos's UUID). Sprint 1 is single-user.
 

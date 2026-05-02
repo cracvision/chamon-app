@@ -1,9 +1,17 @@
-// HMAC-SHA256 request authentication.
-// Headers expected on every request:
-//   x-chamon-timestamp: unix seconds (string)
-//   x-chamon-signature: hex(hmac_sha256(secret, `${timestamp}.${rawBody}`))
+// Request authentication for chamon-query.
 //
-// Replay window: 5 minutes.
+// Two supported modes (checked in order):
+//
+// 1. HMAC-SHA256 (primary, used by CLI/scripts/internal tests)
+//    Headers:
+//      x-chamon-timestamp: unix seconds (string)
+//      x-chamon-signature: hex(hmac_sha256(secret, `${timestamp}.${rawBody}`))
+//    Replay window: 5 minutes.
+//
+// 2. Bearer token (for ElevenLabs Server Tools, which cannot sign bodies)
+//    Header:
+//      Authorization: Bearer <CHAMON_ELEVENLABS_BEARER>
+//    No replay protection. Token must be rotated every 90 days. See README.
 
 const REPLAY_WINDOW_SECONDS = 300;
 
@@ -22,7 +30,7 @@ async function hmacHex(secret: string, payload: string): Promise<string> {
     .join("");
 }
 
-function timingSafeEqualHex(a: string, b: string): boolean {
+function timingSafeEqual(a: string, b: string): boolean {
   if (a.length !== b.length) return false;
   let diff = 0;
   for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
@@ -32,6 +40,7 @@ function timingSafeEqualHex(a: string, b: string): boolean {
 export interface VerifyResult {
   ok: boolean;
   error?: string;
+  mode?: "hmac" | "bearer";
 }
 
 export async function verifyHmac(
@@ -48,8 +57,43 @@ export async function verifyHmac(
     return { ok: false, error: "stale_timestamp" };
   }
   const expected = await hmacHex(secret, `${timestamp}.${rawBody}`);
-  if (!timingSafeEqualHex(expected, signature.toLowerCase())) {
+  if (!timingSafeEqual(expected, signature.toLowerCase())) {
     return { ok: false, error: "bad_signature" };
   }
-  return { ok: true };
+  return { ok: true, mode: "hmac" };
+}
+
+export function verifyBearer(
+  expectedToken: string,
+  authorizationHeader: string | null,
+): VerifyResult {
+  if (!authorizationHeader) return { ok: false, error: "missing_headers" };
+  const match = authorizationHeader.match(/^Bearer\s+(.+)$/);
+  if (!match) return { ok: false, error: "bad_auth_scheme" };
+  const provided = match[1].trim();
+  if (!provided) return { ok: false, error: "empty_bearer" };
+  if (!timingSafeEqual(provided, expectedToken)) {
+    return { ok: false, error: "bad_bearer" };
+  }
+  return { ok: true, mode: "bearer" };
+}
+
+export async function verifyRequest(
+  hmacSecret: string,
+  bearerToken: string | undefined,
+  headers: Headers,
+  rawBody: string,
+): Promise<VerifyResult> {
+  const ts = headers.get("x-chamon-timestamp");
+  const sig = headers.get("x-chamon-signature");
+  const auth = headers.get("authorization");
+
+  // HMAC takes precedence when its headers are present.
+  if (ts || sig) {
+    return await verifyHmac(hmacSecret, ts, sig, rawBody);
+  }
+  if (bearerToken && auth) {
+    return verifyBearer(bearerToken, auth);
+  }
+  return { ok: false, error: "missing_headers" };
 }
