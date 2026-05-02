@@ -4,14 +4,12 @@ import { call } from "../_shared/test_helpers.ts";
 
 const FN = "chamon-create-mission";
 
+// Real seed area_id (Vista Pelícano). chamon-query doesn't expose area_ids in
+// any response shape, so we hardcode here. If the seed changes, update this.
+const SEED_AREA_ID = "3021542d-4034-4086-b0d4-63e6cd743e19";
+
 async function getAnyAreaId(): Promise<string | null> {
-  const { json } = await call({ fn: "chamon-query", body: { query_type: "missions_overview" } });
-  const items = (json?.data?.items ?? json?.data?.missions ?? json?.data ?? []) as Array<{ id?: string; area_id?: string }>;
-  for (const m of items) if (m?.area_id) return m.area_id;
-  const first = items[0]?.id;
-  if (!first) return null;
-  const r2 = await call({ fn: "chamon-query", body: { query_type: "mission_details", params: { mission_id: first } } });
-  return (r2.json?.data?.mission?.area_id ?? r2.json?.data?.area_id ?? null) as string | null;
+  return SEED_AREA_ID;
 }
 
 Deno.test("create_mission — happy path (auto code, Spanish message)", async () => {
