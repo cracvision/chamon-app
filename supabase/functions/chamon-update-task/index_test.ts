@@ -85,3 +85,39 @@ Deno.test("update_task — status to done sets completed_at + Spanish message", 
   assertEquals(json.new_value, "done");
   assert(json.message.startsWith("Hecho."));
 });
+
+// ----- ElevenLabs-style coercion (all params arrive as strings) -----
+
+Deno.test("update_task — ElevenLabs-style is_today='true' → boolean true", async () => {
+  const task_id = await getAnyTaskId();
+  if (!task_id) return;
+  const { status, json } = await call({
+    fn: FN,
+    body: { task_id, field: "is_today", value: "true" },
+  });
+  assertEquals(status, 200);
+  assertEquals(json.new_value, true);
+});
+
+Deno.test("update_task — ElevenLabs-style is_today='false' → boolean false", async () => {
+  const task_id = await getAnyTaskId();
+  if (!task_id) return;
+  const { status, json } = await call({
+    fn: FN,
+    body: { task_id, field: "is_today", value: "false" },
+  });
+  assertEquals(status, 200);
+  assertEquals(json.new_value, false);
+});
+
+Deno.test("update_task — ElevenLabs-style due_date='null' → null", async () => {
+  const task_id = await getAnyTaskId();
+  if (!task_id) return;
+  const { status, json } = await call({
+    fn: FN,
+    body: { task_id, field: "due_date", value: "null" },
+  });
+  assertEquals(status, 200);
+  assertEquals(json.new_value, null);
+  assert(json.message.includes("Sin fecha"));
+});

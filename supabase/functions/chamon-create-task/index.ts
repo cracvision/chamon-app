@@ -54,6 +54,18 @@ Deno.serve(async (req) => {
   let parsed: z.infer<typeof CreateTaskSchema>;
   try {
     const body = rawBody ? JSON.parse(rawBody) : {};
+    // ElevenLabs sends all params as strings. Coerce optional fields that
+    // can't be omitted from a tool call (the agent will pass "null"/"" / "true"/"false").
+    if (body && typeof body === "object") {
+      if (typeof body.due_date === "string" && (body.due_date === "null" || body.due_date === "")) {
+        body.due_date = null;
+      }
+      if (typeof body.is_today === "string") {
+        if (body.is_today === "true") body.is_today = true;
+        else if (body.is_today === "false") body.is_today = false;
+      }
+      if (typeof body.notes === "string" && body.notes === "null") body.notes = null;
+    }
     parsed = CreateTaskSchema.parse(body);
   } catch (e) {
     return json(
