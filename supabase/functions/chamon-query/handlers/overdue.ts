@@ -1,5 +1,5 @@
-import { ChamonClient, scopedTable } from "../client.ts";
-import { dueLabelEs, MSG, todayInPR } from "../format.ts";
+import { ChamonClient, scopedTable } from "../../_shared/client.ts";
+import { dueLabelEs, MSG, todayInPR } from "../../_shared/format.ts";
 
 export async function handleOverdue(supabase: ChamonClient, userId: string) {
   const today = todayInPR();

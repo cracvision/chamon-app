@@ -1,5 +1,5 @@
-import { ChamonClient, scopedTable } from "../client.ts";
-import { dueLabelEs, MSG, priorityEs, statusEs } from "../format.ts";
+import { ChamonClient, scopedTable } from "../../_shared/client.ts";
+import { dueLabelEs, MSG, priorityEs, statusEs } from "../../_shared/format.ts";
 
 export async function handleMissionDetails(
   supabase: ChamonClient,

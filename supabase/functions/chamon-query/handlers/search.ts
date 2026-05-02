@@ -2,8 +2,8 @@
 // This handler intentionally bypasses scopedTable() because it calls the
 // `chamon_search` RPC. That SQL function hardcodes user_id and
 // deleted_at IS NULL filters in its body. See migration for proof.
-import { ChamonClient } from "../client.ts";
-import { dueLabelEs, MSG, statusEs } from "../format.ts";
+import { ChamonClient } from "../../_shared/client.ts";
+import { dueLabelEs, MSG, statusEs } from "../../_shared/format.ts";
 
 export async function handleSearch(
   supabase: ChamonClient,
