@@ -8,7 +8,7 @@
 import { z } from "https://esm.sh/zod@3.23.8";
 import { createServiceClient, scopedTable } from "../_shared/client.ts";
 import { verifyRequest } from "../_shared/auth.ts";
-import { MSG, formatDateEs, statusEsWrite } from "../_shared/format.ts";
+import { MSG, formatDateEs, isValidIsoDate, statusEsWrite } from "../_shared/format.ts";
 import { CORS, jsonResponse as json } from "../_shared/cors.ts";
 import { writeAuditEvent } from "../_shared/audit.ts";
 
@@ -22,7 +22,9 @@ const UpdateTaskSchema = z.discriminatedUnion("field", [
   z.object({
     task_id: z.string().uuid(),
     field: z.literal("due_date"),
-    value: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+    value: z.string()
+      .refine(isValidIsoDate, { message: "fecha_invalida" })
+      .nullable(),
     conversation_id: z.string().optional(),
   }),
   z.object({
@@ -50,6 +52,24 @@ function coerceValue(field: unknown, value: unknown): unknown {
     return value;
   }
   return value;
+}
+
+// Voice-friendly error message when Zod rejects the payload. The agent
+// should be able to read this aloud to Carlos and offer a corrective path.
+function badValueMessage(field: unknown, value: unknown): string {
+  if (field === "is_today") {
+    return `No entendí "${value}" como sí o no. Decime "marcar para hoy" o "quitar de hoy".`;
+  }
+  if (field === "due_date") {
+    return `La fecha "${value}" no es válida. Pásamela como año-mes-día, por ejemplo 2026-05-15, o decime "sin fecha".`;
+  }
+  if (field === "status") {
+    return `"${value}" no es un estado válido. Las opciones son: pendiente, en progreso, esperando, o hecha.`;
+  }
+  if (typeof field === "string") {
+    return `No puedo cambiar el campo "${field}". Solo puedo cambiar estado, fecha o el flag de hoy.`;
+  }
+  return "No entendí qué querés cambiar.";
 }
 
 function buildMessage(field: string, newValue: unknown, taskTitle: string): string {
@@ -86,18 +106,22 @@ Deno.serve(async (req) => {
   }
 
   let parsed: Parsed;
+  let rawObj: Record<string, unknown> = {};
   try {
-    const raw = rawBody ? JSON.parse(rawBody) : {};
-    if (raw && typeof raw === "object") {
-      raw.value = coerceValue(raw.field, raw.value);
+    rawObj = (rawBody ? JSON.parse(rawBody) : {}) as Record<string, unknown>;
+    if (rawObj && typeof rawObj === "object") {
+      rawObj.value = coerceValue(rawObj.field, rawObj.value);
     }
-    parsed = UpdateTaskSchema.parse(raw);
+    parsed = UpdateTaskSchema.parse(rawObj);
   } catch (e) {
     return json(
       {
         ok: false,
         error: MSG.badRequest,
         reason: e instanceof z.ZodError ? "validation" : "invalid_json",
+        message: e instanceof z.ZodError
+          ? badValueMessage(rawObj?.field, rawObj?.value)
+          : "No pude leer la solicitud.",
         details: e instanceof z.ZodError ? e.errors : undefined,
       },
       400,
