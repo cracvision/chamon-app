@@ -7,7 +7,7 @@
 //                   | "what_needs_attention" | "overdue" | "search",
 //     "params": { ... } }
 import { createServiceClient } from "./client.ts";
-import { verifyHmac } from "./auth.ts";
+import { verifyRequest } from "./auth.ts";
 import { MSG } from "./format.ts";
 import { handleTodayFocus } from "./handlers/today_focus.ts";
 import { handleMissionsOverview } from "./handlers/missions_overview.ts";
@@ -35,17 +35,13 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
   const secret = Deno.env.get("CHAMON_HMAC_SECRET");
+  const bearerToken = Deno.env.get("CHAMON_ELEVENLABS_BEARER");
   const userId = Deno.env.get("CHAMON_USER_ID");
   if (!secret) return json({ error: "server_misconfigured: CHAMON_HMAC_SECRET" }, 500);
   if (!userId) return json({ error: MSG.noUser }, 500);
 
   const rawBody = await req.text();
-  const verify = await verifyHmac(
-    secret,
-    req.headers.get("x-chamon-timestamp"),
-    req.headers.get("x-chamon-signature"),
-    rawBody,
-  );
+  const verify = await verifyRequest(secret, bearerToken, req.headers, rawBody);
   if (!verify.ok) {
     return json({ error: MSG.unauthorized, reason: verify.error }, 401);
   }
