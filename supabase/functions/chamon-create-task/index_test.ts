@@ -74,3 +74,36 @@ Deno.test("create_task — no auth → 401", async () => {
   const { status } = await call({ fn: FN, mode: "none", body: { mission_id: "x", title: "x" } });
   assertEquals(status, 401);
 });
+
+Deno.test("create_task — ElevenLabs-style strings: due_date='null', is_today='true'", async () => {
+  const mission_id = await getAnyMissionId();
+  const { status, json } = await call({
+    fn: FN,
+    body: {
+      mission_id,
+      title: `__test_el_coerce_${Date.now()}`,
+      due_date: "null",
+      is_today: "true",
+    },
+  });
+  assertEquals(status, 200);
+  assertEquals(json.ok, true);
+  assertEquals(json.due_date, null);
+  assertEquals(json.is_today, true);
+});
+
+Deno.test("create_task — ElevenLabs-style: due_date='' coerces to null", async () => {
+  const mission_id = await getAnyMissionId();
+  const { status, json } = await call({
+    fn: FN,
+    body: {
+      mission_id,
+      title: `__test_el_empty_${Date.now()}`,
+      due_date: "",
+      is_today: "false",
+    },
+  });
+  assertEquals(status, 200);
+  assertEquals(json.due_date, null);
+  assertEquals(json.is_today, false);
+});
