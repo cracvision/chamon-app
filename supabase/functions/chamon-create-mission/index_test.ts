@@ -5,11 +5,13 @@ import { call } from "../_shared/test_helpers.ts";
 const FN = "chamon-create-mission";
 
 async function getAnyAreaId(): Promise<string | null> {
-  // No areas query in chamon-query; fetch via a roundtrip through missions_overview which exposes area_id.
   const { json } = await call({ fn: "chamon-query", body: { query_type: "missions_overview" } });
-  const items = (json?.data?.items ?? json?.data?.missions ?? json?.data ?? []) as Array<{ area_id?: string }>;
+  const items = (json?.data?.items ?? json?.data?.missions ?? json?.data ?? []) as Array<{ id?: string; area_id?: string }>;
   for (const m of items) if (m?.area_id) return m.area_id;
-  return null;
+  const first = items[0]?.id;
+  if (!first) return null;
+  const r2 = await call({ fn: "chamon-query", body: { query_type: "mission_details", params: { mission_id: first } } });
+  return (r2.json?.data?.mission?.area_id ?? r2.json?.data?.area_id ?? null) as string | null;
 }
 
 Deno.test("create_mission — happy path (auto code, Spanish message)", async () => {
