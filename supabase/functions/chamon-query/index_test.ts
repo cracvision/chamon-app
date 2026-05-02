@@ -106,13 +106,13 @@ async function callBearer(opts: { body: string; authorization?: string | null })
   return { status: res.status, json: await res.json() };
 }
 
-Deno.test("Bearer 1: valid Bearer token returns 200", async () => {
+Deno.test({ name: "Bearer 1: valid Bearer token returns 200", ignore: !BEARER, fn: async () => {
   const body = JSON.stringify({ query_type: "today_focus" });
   const { status, json } = await callBearer({ body, authorization: `Bearer ${BEARER}` });
   assertEquals(status, 200);
   assertEquals(json.ok, true);
   assertEquals(json.query_type, "today_focus");
-});
+}});
 
 Deno.test("Bearer 2: invalid Bearer token returns 401 bad_bearer", async () => {
   const body = JSON.stringify({ query_type: "today_focus" });
@@ -121,12 +121,12 @@ Deno.test("Bearer 2: invalid Bearer token returns 401 bad_bearer", async () => {
   assertEquals(json.reason, "bad_bearer");
 });
 
-Deno.test("Bearer 3: malformed scheme (no Bearer prefix) returns 401", async () => {
+Deno.test({ name: "Bearer 3: malformed scheme (no Bearer prefix) returns 401", ignore: !BEARER, fn: async () => {
   const body = JSON.stringify({ query_type: "today_focus" });
   const { status, json } = await callBearer({ body, authorization: BEARER });
   assertEquals(status, 401);
   assertEquals(json.reason, "bad_auth_scheme");
-});
+}});
 
 Deno.test("Bearer 4: no auth headers at all returns 401 missing_headers", async () => {
   const body = JSON.stringify({ query_type: "today_focus" });
@@ -135,7 +135,7 @@ Deno.test("Bearer 4: no auth headers at all returns 401 missing_headers", async 
   assertEquals(json.reason, "missing_headers");
 });
 
-Deno.test("Bearer 5: HMAC headers take precedence over Bearer", async () => {
+Deno.test({ name: "Bearer 5: HMAC headers take precedence over Bearer", ignore: !BEARER, fn: async () => {
   // Send valid Bearer but ALSO invalid HMAC headers — HMAC should win and fail.
   const body = JSON.stringify({ query_type: "today_focus" });
   const ts = String(Math.floor(Date.now() / 1000));
