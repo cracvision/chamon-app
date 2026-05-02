@@ -88,3 +88,68 @@ Deno.test("Smoke: valid signed request to today_focus returns 200", async () => 
   assertEquals(json.query_type, "today_focus");
   assert("data" in json);
 });
+
+// ============================================================
+// Bearer-mode tests (ElevenLabs Server Tools integration)
+// ============================================================
+
+const BEARER = Deno.env.get("CHAMON_ELEVENLABS_BEARER") ?? "";
+
+async function callBearer(opts: { body: string; authorization?: string | null }) {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  if (opts.authorization !== null && opts.authorization !== undefined) {
+    headers["Authorization"] = opts.authorization;
+  }
+  const res = await fetch(FUNCTION_URL, {
+    method: "POST", headers, body: opts.body,
+  });
+  return { status: res.status, json: await res.json() };
+}
+
+Deno.test("Bearer 1: valid Bearer token returns 200", async () => {
+  const body = JSON.stringify({ query_type: "today_focus" });
+  const { status, json } = await callBearer({ body, authorization: `Bearer ${BEARER}` });
+  assertEquals(status, 200);
+  assertEquals(json.ok, true);
+  assertEquals(json.query_type, "today_focus");
+});
+
+Deno.test("Bearer 2: invalid Bearer token returns 401 bad_bearer", async () => {
+  const body = JSON.stringify({ query_type: "today_focus" });
+  const { status, json } = await callBearer({ body, authorization: "Bearer not-a-real-token-zzz" });
+  assertEquals(status, 401);
+  assertEquals(json.reason, "bad_bearer");
+});
+
+Deno.test("Bearer 3: malformed scheme (no Bearer prefix) returns 401", async () => {
+  const body = JSON.stringify({ query_type: "today_focus" });
+  const { status, json } = await callBearer({ body, authorization: BEARER });
+  assertEquals(status, 401);
+  assertEquals(json.reason, "bad_auth_scheme");
+});
+
+Deno.test("Bearer 4: no auth headers at all returns 401 missing_headers", async () => {
+  const body = JSON.stringify({ query_type: "today_focus" });
+  const { status, json } = await callBearer({ body, authorization: null });
+  assertEquals(status, 401);
+  assertEquals(json.reason, "missing_headers");
+});
+
+Deno.test("Bearer 5: HMAC headers take precedence over Bearer", async () => {
+  // Send valid Bearer but ALSO invalid HMAC headers — HMAC should win and fail.
+  const body = JSON.stringify({ query_type: "today_focus" });
+  const ts = String(Math.floor(Date.now() / 1000));
+  const res = await fetch(FUNCTION_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${BEARER}`,
+      "x-chamon-timestamp": ts,
+      "x-chamon-signature": "0".repeat(64),
+    },
+    body,
+  });
+  const json = await res.json();
+  assertEquals(res.status, 401);
+  assertEquals(json.reason, "bad_signature");
+});
