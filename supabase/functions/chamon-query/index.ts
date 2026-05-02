@@ -6,9 +6,10 @@
 //   { "query_type": "today_focus" | "missions_overview" | "mission_details"
 //                   | "what_needs_attention" | "overdue" | "search",
 //     "params": { ... } }
-import { createServiceClient } from "./client.ts";
-import { verifyRequest } from "./auth.ts";
-import { MSG } from "./format.ts";
+import { createServiceClient } from "../_shared/client.ts";
+import { verifyRequest } from "../_shared/auth.ts";
+import { MSG } from "../_shared/format.ts";
+import { CORS, jsonResponse as json } from "../_shared/cors.ts";
 import { handleTodayFocus } from "./handlers/today_focus.ts";
 import { handleMissionsOverview } from "./handlers/missions_overview.ts";
 import { handleMissionDetails } from "./handlers/mission_details.ts";
