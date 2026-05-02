@@ -7,14 +7,14 @@
 import { z } from "https://esm.sh/zod@3.23.8";
 import { createServiceClient, scopedTable } from "../_shared/client.ts";
 import { verifyRequest } from "../_shared/auth.ts";
-import { MSG, formatDateEs } from "../_shared/format.ts";
+import { MSG, formatDateEs, isValidIsoDate } from "../_shared/format.ts";
 import { CORS, jsonResponse as json } from "../_shared/cors.ts";
 import { writeAuditEvent } from "../_shared/audit.ts";
 
 const CreateTaskSchema = z.object({
   mission_id: z.string().uuid(),
   title: z.string().min(1).max(200),
-  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  due_date: z.string().refine(isValidIsoDate, { message: "fecha_invalida" }).nullable().optional(),
   friction_level: z.number().int().min(1).max(3).optional().default(2),
   is_today: z.boolean().optional().default(false),
   notes: z.string().max(2000).nullable().optional(),
