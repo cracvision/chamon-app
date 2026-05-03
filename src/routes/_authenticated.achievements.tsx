@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useUserStats, useAchievements, useXpEvents, useTasks } from "@/lib/queries";
 import { Trophy, Flame, Target, ListTodo, Zap } from "lucide-react";
 import { useMemo } from "react";
+import { useI18n } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/achievements")({
   component: AchievementsPage,
@@ -10,6 +11,7 @@ export const Route = createFileRoute("/_authenticated/achievements")({
 const LEVEL_THRESHOLDS = [0, 501, 1501, 4001, 10001];
 
 function AchievementsPage() {
+  const { t, lang } = useI18n();
   const { data: stats } = useUserStats();
   const { data: ach } = useAchievements();
   const { data: events = [] } = useXpEvents(50);
@@ -21,7 +23,6 @@ function AchievementsPage() {
   const nxt = LEVEL_THRESHOLDS[lvl] ?? cur;
   const pct = lvl >= 5 ? 100 : Math.min(100, Math.round(((xp - cur) / (nxt - cur)) * 100));
 
-  // Heatmap (last 90 days)
   const heatmap = useMemo(() => {
     const map = new Map<string, number>();
     for (const t of tasks) {
@@ -39,24 +40,25 @@ function AchievementsPage() {
     return days;
   }, [tasks]);
 
+  const locale = lang === "es" ? "es-PR" : "en-US";
+  const levelName = stats?.level_name || t("ach.recruit");
+
   return (
     <div className="px-4 py-5 lg:px-6">
-      <h1 className="mb-1 text-xl font-semibold tracking-tight">Logros</h1>
-      <p className="mb-5 text-xs text-muted-foreground">Tu progreso, trofeos y racha</p>
+      <h1 className="mb-1 text-xl font-semibold tracking-tight">{t("ach.title")}</h1>
+      <p className="mb-5 text-xs text-muted-foreground">{t("ach.subtitle")}</p>
 
-      {/* Stats grid */}
       <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <StatCard icon={Trophy} label="Nivel" value={stats?.level_name || "Recluta"} hint={`Lv ${lvl}`} />
-        <StatCard icon={Zap} label="XP Total" value={String(xp)} hint={lvl >= 5 ? "MAX" : `${nxt - xp} al siguiente`} />
-        <StatCard icon={Flame} label="Racha actual" value={`${stats?.current_streak ?? 0} días`} hint={`máx ${stats?.longest_streak ?? 0}`} />
-        <StatCard icon={ListTodo} label="Tareas" value={String(stats?.tasks_completed_total ?? 0)} hint="completadas" />
-        <StatCard icon={Target} label="Misiones" value={String(stats?.missions_completed_total ?? 0)} hint="completadas" />
+        <StatCard icon={Trophy} label={t("ach.level")} value={levelName} hint={t("ach.levelShort", { n: lvl })} />
+        <StatCard icon={Zap} label={t("ach.xpTotal")} value={String(xp)} hint={lvl >= 5 ? t("ach.xpMax") : t("ach.xpToNext", { n: nxt - xp })} />
+        <StatCard icon={Flame} label={t("ach.streakCurrent")} value={t("ach.streakDays", { n: stats?.current_streak ?? 0 })} hint={t("ach.streakMax", { n: stats?.longest_streak ?? 0 })} />
+        <StatCard icon={ListTodo} label={t("ach.tasks")} value={String(stats?.tasks_completed_total ?? 0)} hint={t("ach.completed")} />
+        <StatCard icon={Target} label={t("ach.missions")} value={String(stats?.missions_completed_total ?? 0)} hint={t("ach.completed")} />
       </div>
 
-      {/* Level progress bar */}
       <section className="surface mb-5 p-4">
         <div className="mb-2 flex items-center justify-between">
-          <p className="label-mono">Progreso al siguiente nivel</p>
+          <p className="label-mono">{t("ach.progressNext")}</p>
           <span className="font-mono text-[11px] tabular-nums text-muted-foreground">{pct}%</span>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-card-elevated">
@@ -64,9 +66,8 @@ function AchievementsPage() {
         </div>
       </section>
 
-      {/* Trophies grid */}
       <section className="surface mb-5 p-4">
-        <p className="label-mono mb-3">Trofeos</p>
+        <p className="label-mono mb-3">{t("ach.trophies")}</p>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {(ach?.catalog ?? []).map(a => {
             const u = ach?.unlocked.find(x => x.achievement_id === a.id);
@@ -86,7 +87,7 @@ function AchievementsPage() {
                 <p className="text-[12px] font-medium leading-tight">{a.name}</p>
                 <p className="text-[10px] leading-tight text-muted-foreground">{a.description}</p>
                 {unlocked ? (
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-accent">Desbloqueado</span>
+                  <span className="font-mono text-[9px] uppercase tracking-widest text-accent">{t("ach.unlocked")}</span>
                 ) : (
                   <div className="w-full">
                     <div className="h-1 overflow-hidden rounded-full bg-card">
@@ -103,9 +104,8 @@ function AchievementsPage() {
         </div>
       </section>
 
-      {/* Heatmap */}
       <section className="surface mb-5 p-4">
-        <p className="label-mono mb-3">Actividad (90 días)</p>
+        <p className="label-mono mb-3">{t("ach.activity")}</p>
         <div className="flex flex-wrap gap-[3px]">
           {heatmap.map(d => {
             const intensity = d.count === 0 ? 0 : Math.min(4, d.count);
@@ -113,7 +113,7 @@ function AchievementsPage() {
             return (
               <div
                 key={d.date}
-                title={`${d.date} · ${d.count} tareas`}
+                title={t("ach.heatmapTitle", { date: d.date, n: d.count })}
                 className={`h-3 w-3 rounded-sm ${bg}`}
               />
             );
@@ -121,19 +121,18 @@ function AchievementsPage() {
         </div>
       </section>
 
-      {/* Recent XP events */}
       <section className="surface p-4">
-        <p className="label-mono mb-3">Actividad reciente</p>
+        <p className="label-mono mb-3">{t("ach.recent")}</p>
         {events.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Aún no tienes XP. Completa una tarea para arrancar.</p>
+          <p className="text-xs text-muted-foreground">{t("ach.empty")}</p>
         ) : (
           <ul className="flex flex-col gap-1">
             {events.map(ev => (
               <li key={ev.id} className="flex items-center justify-between rounded-md border border-border bg-card-elevated px-2.5 py-1.5">
                 <div className="min-w-0">
-                  <p className="text-xs">{labelFor(ev.reason)}</p>
+                  <p className="text-xs">{labelFor(ev.reason, t)}</p>
                   <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
-                    {new Date(ev.created_at).toLocaleString("es-PR", { dateStyle: "short", timeStyle: "short" })}
+                    {new Date(ev.created_at).toLocaleString(locale, { dateStyle: "short", timeStyle: "short" })}
                   </p>
                 </div>
                 <span className={`font-mono text-xs tabular-nums ${ev.delta > 0 ? "text-success" : "text-destructive"}`}>
@@ -148,11 +147,11 @@ function AchievementsPage() {
   );
 }
 
-function labelFor(reason: string): string {
+function labelFor(reason: string, t: ReturnType<typeof useI18n>["t"]): string {
   switch (reason) {
-    case "task_completed": return "Tarea completada";
-    case "mission_completed": return "Misión completada";
-    case "achievement_unlocked": return "Trofeo desbloqueado";
+    case "task_completed": return t("ach.reason.task_completed");
+    case "mission_completed": return t("ach.reason.mission_completed");
+    case "achievement_unlocked": return t("ach.reason.achievement_unlocked");
     default: return reason;
   }
 }
