@@ -68,9 +68,11 @@ export function verifyBearer(
   authorizationHeader: string | null,
 ): VerifyResult {
   if (!authorizationHeader) return { ok: false, error: "missing_headers" };
-  const match = authorizationHeader.match(/^Bearer\s+(.+)$/);
-  if (!match) return { ok: false, error: "bad_auth_scheme" };
-  const provided = match[1].trim();
+  // Accept either "Bearer <token>" (case-insensitive scheme) or a raw token
+  // (some clients, e.g. ElevenLabs Server Tools, send the secret value as-is
+  // in the Authorization header without a scheme prefix).
+  const match = authorizationHeader.match(/^Bearer\s+(.+)$/i);
+  const provided = (match ? match[1] : authorizationHeader).trim();
   if (!provided) return { ok: false, error: "empty_bearer" };
   if (!timingSafeEqual(provided, expectedToken)) {
     return { ok: false, error: "bad_bearer" };

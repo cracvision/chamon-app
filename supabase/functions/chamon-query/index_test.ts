@@ -122,11 +122,26 @@ Deno.test("Bearer 2: invalid Bearer token returns 401 bad_bearer", async () => {
   assertEquals(json.reason, "bad_bearer");
 });
 
-Deno.test({ name: "Bearer 3: malformed scheme (no Bearer prefix) returns 401", ignore: !BEARER, fn: async () => {
+Deno.test({ name: "Bearer 3: raw token without 'Bearer ' prefix returns 200 (ElevenLabs format)", ignore: !BEARER, fn: async () => {
   const body = JSON.stringify({ query_type: "today_focus" });
   const { status, json } = await callBearer({ body, authorization: BEARER });
+  assertEquals(status, 200);
+  assertEquals(json.ok, true);
+  },
+});
+
+Deno.test("Bearer 6: raw invalid token (no prefix) returns 401 bad_bearer", async () => {
+  const body = JSON.stringify({ query_type: "today_focus" });
+  const { status, json } = await callBearer({ body, authorization: "not-a-real-token-zzz" });
   assertEquals(status, 401);
-  assertEquals(json.reason, "bad_auth_scheme");
+  assertEquals(json.reason, "bad_bearer");
+});
+
+Deno.test({ name: "Bearer 7: lowercase 'bearer' prefix accepted (case-insensitive)", ignore: !BEARER, fn: async () => {
+  const body = JSON.stringify({ query_type: "today_focus" });
+  const { status, json } = await callBearer({ body, authorization: `bearer ${BEARER}` });
+  assertEquals(status, 200);
+  assertEquals(json.ok, true);
   },
 });
 
