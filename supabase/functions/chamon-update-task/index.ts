@@ -8,7 +8,7 @@
 import { z } from "https://esm.sh/zod@3.23.8";
 import { createServiceClient, scopedTable } from "../_shared/client.ts";
 import { verifyRequest } from "../_shared/auth.ts";
-import { MSG, formatDateEs, isValidIsoDate, statusEsWrite } from "../_shared/format.ts";
+import { MSG, formatDateEs, isValidIsoDate, statusEsWrite, voiceErrorMessage } from "../_shared/format.ts";
 import { CORS, jsonResponse as json } from "../_shared/cors.ts";
 import { writeAuditEvent } from "../_shared/audit.ts";
 
@@ -114,15 +114,33 @@ Deno.serve(async (req) => {
     }
     parsed = UpdateTaskSchema.parse(rawObj);
   } catch (e) {
+    if (e instanceof z.ZodError) {
+      const first = e.errors[0];
+      const path = first?.path?.[0];
+      // Si falla `value`, usamos el mensaje contextual por field (más específico).
+      // Si falla task_id, field, o cualquier otro, usamos voiceErrorMessage.
+      const message = path === "value"
+        ? badValueMessage(rawObj?.field, rawObj?.value)
+        : voiceErrorMessage(e.errors);
+      return json(
+        {
+          ok: false,
+          error: MSG.badRequest,
+          reason: "validation",
+          field: first?.path?.join(".") ?? null,
+          issue: first?.message ?? null,
+          message,
+          details: e.errors,
+        },
+        400,
+      );
+    }
     return json(
       {
         ok: false,
         error: MSG.badRequest,
-        reason: e instanceof z.ZodError ? "validation" : "invalid_json",
-        message: e instanceof z.ZodError
-          ? badValueMessage(rawObj?.field, rawObj?.value)
-          : "No pude leer la solicitud.",
-        details: e instanceof z.ZodError ? e.errors : undefined,
+        reason: "invalid_json",
+        message: "El body no es JSON válido.",
       },
       400,
     );
