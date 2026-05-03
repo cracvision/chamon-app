@@ -121,3 +121,35 @@ Deno.test("update_task — ElevenLabs-style due_date='null' → null", async () 
   assertEquals(json.new_value, null);
   assert(json.message.includes("Sin fecha"));
 });
+
+// ----- Voice-friendly error messages for invalid values -----
+
+Deno.test("update_task — is_today='yes' → 400 with voice-friendly message", async () => {
+  const { status, json } = await call({
+    fn: FN,
+    body: { task_id: "00000000-0000-0000-0000-000000000000", field: "is_today", value: "yes" },
+  });
+  assertEquals(status, 400);
+  assert(json.message.includes("sí o no"));
+  assert(json.message.includes("marcar para hoy"));
+});
+
+Deno.test("update_task — due_date='2026-13-45' → 400 with voice-friendly message", async () => {
+  const { status, json } = await call({
+    fn: FN,
+    body: { task_id: "00000000-0000-0000-0000-000000000000", field: "due_date", value: "2026-13-45" },
+  });
+  assertEquals(status, 400);
+  assert(json.message.includes("no es válida"));
+  assert(json.message.includes("año-mes-día"));
+});
+
+Deno.test("update_task — status='finished' → 400 enumerates valid options", async () => {
+  const { status, json } = await call({
+    fn: FN,
+    body: { task_id: "00000000-0000-0000-0000-000000000000", field: "status", value: "finished" },
+  });
+  assertEquals(status, 400);
+  assert(json.message.includes("pendiente"));
+  assert(json.message.includes("hecha"));
+});

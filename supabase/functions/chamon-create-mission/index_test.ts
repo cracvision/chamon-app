@@ -50,3 +50,22 @@ Deno.test("create_mission — Zod rejects bad input (400)", async () => {
   const { status } = await call({ fn: FN, body: { area_id: "nope" } });
   assertEquals(status, 400);
 });
+
+import { assert as _assert } from "https://deno.land/std@0.224.0/assert/mod.ts";
+
+Deno.test("create_mission — due_date='2026-02-31' → 400 with voice-friendly message", async () => {
+  const { json: areasJson } = await call({ fn: "chamon-query", body: { query_type: "missions_overview" } });
+  // Need an area_id; reuse from any existing mission's area or skip if unavailable
+  const items = (areasJson?.data?.items ?? []) as Array<{ area_id?: string }>;
+  const area_id = items.find((m) => m.area_id)?.area_id;
+  if (!area_id) {
+    console.warn("no area available; skipping invalid-date test");
+    return;
+  }
+  const { status, json } = await call({
+    fn: "chamon-create-mission",
+    body: { area_id, title: "x", due_date: "2026-02-31" },
+  });
+  assertEquals(status, 400);
+  _assert(typeof json.message === "string" && json.message.includes("año-mes-día"));
+});
