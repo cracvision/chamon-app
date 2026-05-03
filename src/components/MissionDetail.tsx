@@ -23,6 +23,8 @@ export function MissionDetail({ mission, tasks, areas }: Props) {
   const updateTask = useUpdateTask();
   const createTask = useCreateTask();
   const deleteTask = useSoftDeleteTask();
+  const reorderTasks = useReorderTasks();
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const myTasks = tasks.filter(tk => tk.mission_id === mission.id);
   const open = myTasks.filter(tk => tk.status !== "done").length;
