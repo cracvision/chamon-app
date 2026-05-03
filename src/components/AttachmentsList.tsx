@@ -4,7 +4,7 @@ import { useI18n } from "@/lib/i18n";
 import { useAuth } from "@/lib/auth";
 import { formatBytes } from "@/lib/format";
 import { toast } from "sonner";
-import { Upload, FileText, Image as ImageIcon, Trash2, Download, FileSpreadsheet, File, X } from "lucide-react";
+import { Upload, FileText, Image as ImageIcon, Trash2, Download, FileSpreadsheet, File } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { Attachment } from "@/lib/queries";
 
@@ -187,16 +187,10 @@ export function AttachmentsList({ missionId, taskId }: Props) {
                 </div>
                 <button
                   onClick={() => download(previewItem)}
-                  className="rounded p-1.5 text-muted-foreground hover:bg-card hover:text-foreground"
+                  className="mr-8 rounded p-1.5 text-muted-foreground hover:bg-card hover:text-foreground"
                   title={t("download")}
                 >
                   <Download className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setPreviewItem(null)}
-                  className="rounded p-1.5 text-muted-foreground hover:bg-card hover:text-foreground"
-                >
-                  <X className="h-4 w-4" />
                 </button>
               </div>
               <div className="flex max-h-[80vh] min-h-[300px] items-center justify-center overflow-auto bg-background">
