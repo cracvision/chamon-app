@@ -2,11 +2,13 @@ import { createFileRoute, Outlet, Navigate, Link, useRouterState } from "@tansta
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
-import { Radar, LayoutDashboard, Sun, Calendar, Users, Settings, LogOut, Plus, Activity } from "lucide-react";
+import { Radar, LayoutDashboard, Sun, Calendar, Users, Settings, LogOut, Plus, Trophy } from "lucide-react";
 import { LangToggle } from "@/components/LangToggle";
 import { Button } from "@/components/ui/button";
 import { QuickAddDialog } from "@/components/QuickAddDialog";
 import { ChamonVoiceWidget } from "@/components/ChamonVoiceWidget";
+import { XpHud } from "@/components/XpHud";
+import { XpWatcher } from "@/lib/xp-watcher";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthLayout,
@@ -32,6 +34,7 @@ function AuthLayout() {
   const navItems = [
     { to: "/dashboard", label: t("nav.dashboard"), icon: LayoutDashboard },
     { to: "/today", label: t("nav.today"), icon: Sun },
+    { to: "/achievements", label: "Logros", icon: Trophy },
     { to: "/calendar", label: t("nav.calendar"), icon: Calendar },
     { to: "/contacts", label: t("nav.contacts"), icon: Users },
     { to: "/settings", label: t("nav.settings"), icon: Settings },
@@ -54,9 +57,7 @@ function AuthLayout() {
         </div>
 
         <div className="flex items-center gap-3">
-          <span className="hidden items-center gap-2 rounded-md border border-border bg-card px-3 py-1 font-mono text-[11px] text-success pulse-dot sm:inline-flex">
-            <span className="text-success">{t("online")}</span>
-          </span>
+          <XpHud />
           <span className="hidden font-mono text-[12px] tabular-nums text-muted-foreground md:inline">{time} AST</span>
           <LangToggle />
           <Button size="sm" onClick={() => setQuickOpen(true)} className="h-8 bg-accent text-accent-foreground hover:bg-accent/90">
@@ -118,6 +119,7 @@ function AuthLayout() {
 
       <QuickAddDialog open={quickOpen} onOpenChange={setQuickOpen} />
       <ChamonVoiceWidget />
+      <XpWatcher />
     </div>
   );
 }
