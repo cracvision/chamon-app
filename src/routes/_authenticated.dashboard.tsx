@@ -3,7 +3,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useMissions, useTasks, useAreas } from "@/lib/queries";
 import { MissionCard } from "@/components/MissionCard";
 import { FocusTaskCard } from "@/components/FocusTaskCard";
-import { MissionDetail } from "@/components/MissionDetail";
+import { MissionDetail, MissionDangerZone } from "@/components/MissionDetail";
 import { useI18n } from "@/lib/i18n";
 import { formatMoney, dueLabel, daysFromToday } from "@/lib/format";
 import { Target, ListTodo, AlertTriangle, TrendingUp, Sun } from "lucide-react";
