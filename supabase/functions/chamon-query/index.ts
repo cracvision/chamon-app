@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
   const params = (parsed.params ?? {}) as Record<string, unknown>;
   if (!queryType) {
     return bad(
-      "Falta el campo top-level query_type. Valores válidos: today_focus, missions_overview, mission_details, what_needs_attention, overdue, search.",
+      "Falta el campo top-level query_type. Valores válidos: today_focus, missions_overview, mission_details, what_needs_attention, overdue, search, xp_status.",
       "missing_query_type",
     );
   }
