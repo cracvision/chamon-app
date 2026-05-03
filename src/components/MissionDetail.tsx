@@ -181,22 +181,20 @@ export function MissionDangerZone({ missionId }: { missionId: string }) {
   const deleteMission = useSoftDeleteMission();
   return (
     <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4">
-      <p className="label-mono mb-1 text-destructive">zona peligrosa</p>
-      <p className="mb-3 text-xs text-muted-foreground">
-        Esta acción elimina la misión completa, incluyendo sus tareas y adjuntos.
-      </p>
+      <p className="label-mono mb-1 text-destructive">{t("danger.zone")}</p>
+      <p className="mb-3 text-xs text-muted-foreground">{t("danger.mission.desc")}</p>
       <Button
         size="sm"
         variant="ghost"
         onClick={() => {
-          if (confirm("¿Borrar esta misión? Esta acción no se puede deshacer.")) {
+          if (confirm(t("danger.mission.confirm"))) {
             deleteMission.mutate(missionId);
             toast.success(t("deleted"));
           }
         }}
         className="h-9 w-full justify-center border border-destructive/40 text-xs font-semibold uppercase tracking-wider text-destructive hover:bg-destructive hover:text-destructive-foreground"
       >
-        <Trash2 className="mr-2 h-4 w-4" />Borrar misión
+        <Trash2 className="mr-2 h-4 w-4" />{t("danger.mission.button")}
       </Button>
     </div>
   );
