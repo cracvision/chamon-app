@@ -34,7 +34,7 @@ function AuthLayout() {
   const navItems = [
     { to: "/dashboard", label: t("nav.dashboard"), icon: LayoutDashboard },
     { to: "/today", label: t("nav.today"), icon: Sun },
-    { to: "/achievements", label: "Logros", icon: Trophy },
+    { to: "/achievements", label: t("nav.achievements"), icon: Trophy },
     { to: "/calendar", label: t("nav.calendar"), icon: Calendar },
     { to: "/contacts", label: t("nav.contacts"), icon: Users },
     { to: "/settings", label: t("nav.settings"), icon: Settings },
