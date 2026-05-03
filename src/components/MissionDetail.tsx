@@ -19,7 +19,6 @@ export function MissionDetail({ mission, tasks, areas }: Props) {
   const updateMission = useUpdateMission();
   const updateTask = useUpdateTask();
   const createTask = useCreateTask();
-  const deleteMission = useSoftDeleteMission();
   const deleteTask = useSoftDeleteTask();
 
   const myTasks = tasks.filter(tk => tk.mission_id === mission.id);
