@@ -128,6 +128,8 @@ function Dashboard() {
               </ul>
             )}
           </section>
+
+          {selected && <MissionDangerZone missionId={selected.id} />}
         </div>
       </div>
     </div>
