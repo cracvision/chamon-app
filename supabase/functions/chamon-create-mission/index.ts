@@ -20,7 +20,6 @@ const CreateMissionSchema = z.object({
   description: z.string().max(2000).nullable().optional(),
   due_date: z.string().refine(isValidIsoDate, { message: "fecha_invalida" }).nullable().optional(),
   priority: z.enum(["low", "mid", "high"]).optional().default("mid"),
-  cost_of_inaction_weekly: z.number().min(0).max(10000).optional().default(0),
   reward_text: z.string().max(500).nullable().optional(),
   conversation_id: z.string().optional(),
 });
@@ -52,7 +51,6 @@ async function insertMissionWithRetry(
       description: parsed.description ?? null,
       due_date: parsed.due_date ?? null,
       priority: parsed.priority,
-      cost_of_inaction_weekly: parsed.cost_of_inaction_weekly,
       reward_text: parsed.reward_text ?? null,
       code,
     });
@@ -68,15 +66,11 @@ function buildMessage(p: {
   title: string;
   area_name: string;
   priority: "low" | "mid" | "high";
-  cost_of_inaction_weekly: number;
   due_date: string | null;
 }): string {
   const parts = [
     `Mission ${p.title} creada en el área ${p.area_name} con prioridad ${priorityEs(p.priority)}.`,
   ];
-  if (p.cost_of_inaction_weekly > 0) {
-    parts.push(`COI registrado en ${formatDollars(p.cost_of_inaction_weekly)} dólares semanales.`);
-  }
   if (p.due_date) parts.push(`Fecha objetivo: ${formatDateEs(p.due_date)}.`);
   parts.push("¿Le añadimos tareas ahora o lo dejamos para después?");
   return parts.join(" ");
@@ -109,10 +103,6 @@ Deno.serve(async (req) => {
       }
       if (typeof body.description === "string" && body.description === "null") body.description = null;
       if (typeof body.reward_text === "string" && body.reward_text === "null") body.reward_text = null;
-      if (typeof body.cost_of_inaction_weekly === "string") {
-        const n = Number(body.cost_of_inaction_weekly);
-        if (Number.isFinite(n)) body.cost_of_inaction_weekly = n;
-      }
     }
     parsed = CreateMissionSchema.parse(body);
   } catch (e) {
