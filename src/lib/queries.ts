@@ -130,6 +130,20 @@ export function useSoftDeleteMission() {
   });
 }
 
+export function useReorderTasks() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (items: { id: string; sort_order: number }[]) => {
+      await Promise.all(
+        items.map(({ id, sort_order }) =>
+          supabase.from("tasks").update({ sort_order }).eq("id", id)
+        )
+      );
+    },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ["tasks"] }); },
+  });
+}
+
 export function useSoftDeleteTask() {
   const qc = useQueryClient();
   return useMutation({
