@@ -1,6 +1,6 @@
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { useMissions, useTasks, useAreas } from "@/lib/queries";
-import { MissionDetail } from "@/components/MissionDetail";
+import { MissionDetail, MissionDangerZone } from "@/components/MissionDetail";
 import { useI18n } from "@/lib/i18n";
 import { ArrowLeft } from "lucide-react";
 
@@ -24,6 +24,9 @@ function MissionPage() {
       </Link>
       <div className="surface p-5">
         <MissionDetail mission={mission} tasks={tasks} areas={areas} />
+      </div>
+      <div className="mt-5">
+        <MissionDangerZone missionId={mission.id} />
       </div>
     </div>
   );
