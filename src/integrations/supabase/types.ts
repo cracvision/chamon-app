@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      achievements: {
+        Row: {
+          created_at: string
+          criteria_type: string
+          criteria_value: number
+          description: string
+          icon: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          criteria_type: string
+          criteria_value?: number
+          description: string
+          icon: string
+          id: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          criteria_type?: string
+          criteria_value?: number
+          description?: string
+          icon?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
       areas: {
         Row: {
           code: string | null
@@ -196,7 +229,6 @@ export type Database = {
           area_id: string | null
           code: string | null
           completed_at: string | null
-          cost_of_inaction_weekly: number
           created_at: string
           created_by: string | null
           deleted_at: string | null
@@ -218,7 +250,6 @@ export type Database = {
           area_id?: string | null
           code?: string | null
           completed_at?: string | null
-          cost_of_inaction_weekly?: number
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
@@ -240,7 +271,6 @@ export type Database = {
           area_id?: string | null
           code?: string | null
           completed_at?: string | null
-          cost_of_inaction_weekly?: number
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
@@ -450,11 +480,136 @@ export type Database = {
           },
         ]
       }
+      user_achievements: {
+        Row: {
+          achievement_id: string
+          created_at: string
+          id: string
+          progress: number
+          unlocked_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          achievement_id: string
+          created_at?: string
+          id?: string
+          progress?: number
+          unlocked_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string
+          created_at?: string
+          id?: string
+          progress?: number
+          unlocked_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_stats: {
+        Row: {
+          current_level: number
+          current_streak: number
+          last_active_date: string | null
+          level_name: string
+          longest_streak: number
+          missions_completed_total: number
+          tasks_completed_total: number
+          total_xp: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          current_level?: number
+          current_streak?: number
+          last_active_date?: string | null
+          level_name?: string
+          longest_streak?: number
+          missions_completed_total?: number
+          tasks_completed_total?: number
+          total_xp?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          current_level?: number
+          current_streak?: number
+          last_active_date?: string | null
+          level_name?: string
+          longest_streak?: number
+          missions_completed_total?: number
+          tasks_completed_total?: number
+          total_xp?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      xp_events: {
+        Row: {
+          achievement_id: string | null
+          created_at: string
+          delta: number
+          id: string
+          metadata: Json | null
+          mission_id: string | null
+          reason: string
+          task_id: string | null
+          user_id: string
+        }
+        Insert: {
+          achievement_id?: string | null
+          created_at?: string
+          delta: number
+          id?: string
+          metadata?: Json | null
+          mission_id?: string | null
+          reason: string
+          task_id?: string | null
+          user_id: string
+        }
+        Update: {
+          achievement_id?: string | null
+          created_at?: string
+          delta?: number
+          id?: string
+          metadata?: Json | null
+          mission_id?: string | null
+          reason?: string
+          task_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      award_xp: {
+        Args: {
+          _achievement_id?: string
+          _delta: number
+          _metadata?: Json
+          _mission_id?: string
+          _reason: string
+          _task_id?: string
+          _user_id: string
+        }
+        Returns: undefined
+      }
       chamon_search: {
         Args: { _limit?: number; _query: string; _user_id: string }
         Returns: {
@@ -468,6 +623,14 @@ export type Database = {
           title: string
         }[]
       }
+      compute_level: {
+        Args: { _xp: number }
+        Returns: {
+          level: number
+          name: string
+        }[]
+      }
+      evaluate_achievements: { Args: { _user_id: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
