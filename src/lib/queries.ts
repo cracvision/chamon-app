@@ -8,6 +8,53 @@ export type Area = Database["public"]["Tables"]["areas"]["Row"];
 export type Contact = Database["public"]["Tables"]["contacts"]["Row"];
 export type Attachment = Database["public"]["Tables"]["attachments"]["Row"];
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
+export type UserStats = Database["public"]["Tables"]["user_stats"]["Row"];
+export type Achievement = Database["public"]["Tables"]["achievements"]["Row"];
+export type UserAchievement = Database["public"]["Tables"]["user_achievements"]["Row"];
+export type XpEvent = Database["public"]["Tables"]["xp_events"]["Row"];
+
+export function useUserStats() {
+  return useQuery({
+    queryKey: ["user_stats"],
+    queryFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return null;
+      const { data, error } = await supabase.from("user_stats").select("*").eq("user_id", u.user.id).maybeSingle();
+      if (error) throw error;
+      return data as UserStats | null;
+    },
+    refetchInterval: 30000,
+  });
+}
+
+export function useAchievements() {
+  return useQuery({
+    queryKey: ["achievements"],
+    queryFn: async () => {
+      const [cat, mine] = await Promise.all([
+        supabase.from("achievements").select("*").order("sort_order"),
+        supabase.from("user_achievements").select("*"),
+      ]);
+      if (cat.error) throw cat.error;
+      if (mine.error) throw mine.error;
+      return {
+        catalog: (cat.data || []) as Achievement[],
+        unlocked: (mine.data || []) as UserAchievement[],
+      };
+    },
+  });
+}
+
+export function useXpEvents(limit = 30) {
+  return useQuery({
+    queryKey: ["xp_events", limit],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("xp_events").select("*").order("created_at", { ascending: false }).limit(limit);
+      if (error) throw error;
+      return (data || []) as XpEvent[];
+    },
+  });
+}
 
 export function useMissions() {
   return useQuery({
