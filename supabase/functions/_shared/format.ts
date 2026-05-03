@@ -105,3 +105,59 @@ export const MSG = {
     search: "No encontré coincidencias para esa búsqueda.",
   },
 };
+
+/**
+ * Coerce a possibly-stringified number to number. Returns null if it can't
+ * be converted (e.g. "abc"). Used because ElevenLabs serializes everything
+ * as string in tool calls.
+ */
+export function coerceNumber(v: unknown): number | null {
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  if (typeof v === "string" && v.trim() !== "" && Number.isFinite(Number(v))) {
+    return Number(v);
+  }
+  return null;
+}
+
+/**
+ * Translate a Zod issue into a voice-friendly Spanish message. The agent
+ * reads this aloud to the user, so the wording prompts a corrective answer.
+ */
+// deno-lint-ignore no-explicit-any
+export function voiceErrorMessage(issues: any[]): string {
+  const first = issues?.[0];
+  const path = first?.path?.[0];
+  const msg = first?.message ?? "";
+
+  if (path === "mission_id") {
+    return "No tengo claro en qué mission va esto. ¿Me dices el nombre?";
+  }
+  if (path === "task_id") {
+    return "No identifiqué cuál tarea. ¿Cuál era?";
+  }
+  if (path === "area_id") {
+    return "No tengo el área. ¿En qué área la creo?";
+  }
+  if (path === "title") {
+    return "Me falta el título. ¿Cómo se llama?";
+  }
+  if (path === "due_date" || msg === "fecha_invalida") {
+    return "La fecha que pasaste no es válida. Pásamela como año-mes-día, por ejemplo 2026-05-15, o sin fecha.";
+  }
+  if (path === "priority") {
+    return "La prioridad debe ser baja, media o alta.";
+  }
+  if (path === "friction_level") {
+    return "El nivel de fricción debe ser 1, 2 o 3.";
+  }
+  if (path === "cost_of_inaction_weekly") {
+    return "El costo semanal de inacción debe ser un número entre 0 y 10000.";
+  }
+  if (path === "is_today") {
+    return "El campo is_today debe ser true o false.";
+  }
+  if (typeof path === "string" && path.length > 0) {
+    return `Falta o es inválido el campo "${path}" (${msg}).`;
+  }
+  return "No pude leer la solicitud. Revisá los datos e intentá de nuevo.";
+}

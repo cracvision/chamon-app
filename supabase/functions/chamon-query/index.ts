@@ -8,7 +8,7 @@
 //     "params": { ... } }
 import { createServiceClient } from "../_shared/client.ts";
 import { verifyRequest } from "../_shared/auth.ts";
-import { MSG } from "../_shared/format.ts";
+import { MSG, coerceNumber } from "../_shared/format.ts";
 import { CORS, jsonResponse as json } from "../_shared/cors.ts";
 import { handleTodayFocus } from "./handlers/today_focus.ts";
 import { handleMissionsOverview } from "./handlers/missions_overview.ts";
@@ -16,6 +16,10 @@ import { handleMissionDetails } from "./handlers/mission_details.ts";
 import { handleWhatNeedsAttention } from "./handlers/what_needs_attention.ts";
 import { handleOverdue } from "./handlers/overdue.ts";
 import { handleSearch } from "./handlers/search.ts";
+
+function bad(message: string, reason: string) {
+  return json({ ok: false, error: MSG.badRequest, reason, message }, 400);
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
@@ -42,7 +46,12 @@ Deno.serve(async (req) => {
 
   const queryType = parsed.query_type;
   const params = (parsed.params ?? {}) as Record<string, unknown>;
-  if (!queryType) return json({ error: MSG.badRequest, reason: "missing_query_type" }, 400);
+  if (!queryType) {
+    return bad(
+      "Falta el campo top-level query_type. Valores válidos: today_focus, missions_overview, mission_details, what_needs_attention, overdue, search.",
+      "missing_query_type",
+    );
+  }
 
   const supabase = createServiceClient();
   try {
@@ -54,26 +63,63 @@ Deno.serve(async (req) => {
       case "missions_overview":
         result = await handleMissionsOverview(supabase, userId);
         break;
-      case "mission_details":
+      case "mission_details": {
+        const mid = typeof params.mission_id === "string" && params.mission_id.length > 0
+          ? params.mission_id : undefined;
+        const mtitle = typeof params.mission_title === "string" && params.mission_title.length > 0
+          ? params.mission_title : undefined;
+        if (!mid && !mtitle) {
+          return bad(
+            "Falta params.mission_id o params.mission_title para query_type=mission_details.",
+            "missing_mission_identifier",
+          );
+        }
         result = await handleMissionDetails(supabase, userId, {
-          mission_id: typeof params.mission_id === "string" ? params.mission_id : undefined,
-          mission_title: typeof params.mission_title === "string" ? params.mission_title : undefined,
+          mission_id: mid,
+          mission_title: mtitle,
         });
         break;
-      case "what_needs_attention":
-        result = await handleWhatNeedsAttention(supabase, userId, {
-          limit: typeof params.limit === "number" ? params.limit : undefined,
-        });
+      }
+      case "what_needs_attention": {
+        let limit: number | undefined;
+        if (params.limit !== undefined && params.limit !== null) {
+          const n = coerceNumber(params.limit);
+          if (n === null) {
+            return bad("El parámetro params.limit debe ser un número.", "bad_limit");
+          }
+          limit = n;
+        }
+        result = await handleWhatNeedsAttention(supabase, userId, { limit });
         break;
+      }
       case "overdue":
         result = await handleOverdue(supabase, userId);
         break;
-      case "search":
-        result = await handleSearch(supabase, userId, {
-          query: typeof params.query === "string" ? params.query : undefined,
-          limit: typeof params.limit === "number" ? params.limit : undefined,
-        });
+      case "search": {
+        const query = typeof params.query === "string" ? params.query.trim() : "";
+        if (!query) {
+          return bad(
+            "Falta el parámetro params.query para query_type=search.",
+            "missing_params_query",
+          );
+        }
+        if (query.length < 2) {
+          return bad(
+            "El parámetro params.query debe tener al menos 2 caracteres.",
+            "params_query_too_short",
+          );
+        }
+        let limit: number | undefined;
+        if (params.limit !== undefined && params.limit !== null) {
+          const n = coerceNumber(params.limit);
+          if (n === null) {
+            return bad("El parámetro params.limit debe ser un número.", "bad_limit");
+          }
+          limit = n;
+        }
+        result = await handleSearch(supabase, userId, { query, limit });
         break;
+      }
       default:
         return json({ error: MSG.unknownIntent, query_type: queryType }, 400);
     }

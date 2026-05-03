@@ -7,7 +7,7 @@
 import { z } from "https://esm.sh/zod@3.23.8";
 import { createServiceClient, scopedTable } from "../_shared/client.ts";
 import { verifyRequest } from "../_shared/auth.ts";
-import { MSG, formatDateEs, isValidIsoDate } from "../_shared/format.ts";
+import { MSG, formatDateEs, isValidIsoDate, voiceErrorMessage } from "../_shared/format.ts";
 import { CORS, jsonResponse as json } from "../_shared/cors.ts";
 import { writeAuditEvent } from "../_shared/audit.ts";
 
@@ -68,15 +68,26 @@ Deno.serve(async (req) => {
     }
     parsed = CreateTaskSchema.parse(body);
   } catch (e) {
-    const dateErr = e instanceof z.ZodError && e.errors.some((er) => er.path[0] === "due_date");
+    if (e instanceof z.ZodError) {
+      const first = e.errors[0];
+      return json(
+        {
+          ok: false,
+          error: MSG.badRequest,
+          reason: "validation",
+          field: first?.path?.join(".") ?? null,
+          issue: first?.message ?? null,
+          message: voiceErrorMessage(e.errors),
+        },
+        400,
+      );
+    }
     return json(
       {
         ok: false,
         error: MSG.badRequest,
-        reason: e instanceof z.ZodError ? "validation" : "invalid_json",
-        message: dateErr
-          ? "La fecha que pasaste no es válida. Pásamela como año-mes-día, por ejemplo 2026-05-15, o sin fecha."
-          : "No pude crear la tarea. Revisá los datos e intentá de nuevo.",
+        reason: "invalid_json",
+        message: "El body no es JSON válido.",
       },
       400,
     );
