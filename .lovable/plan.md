@@ -1,44 +1,41 @@
-# Thumbnails + Preview de Adjuntos
+## Activar Digest Automático (Phase 2)
 
-Sí, es totalmente posible. El bucket `task-attachments` ya existe y los archivos están en Supabase Storage, así que solo hay que mejorar el componente `AttachmentsList.tsx` (y opcionalmente añadir un componente de preview).
+Hoy `send-digest-now` solo dispara con el botón porque requiere el JWT del usuario logueado. Para enviar automáticamente a la hora configurada por cada usuario, necesitamos un job programado que recorra los profiles habilitados y dispare envíos sin sesión interactiva.
 
-## Qué se va a construir
+### Cambios
 
-1. **Thumbnails inline** para cada adjunto en la lista:
-   - **Imágenes** (png/jpeg/webp/heic): miniatura cuadrada (40×40) con la imagen real, generada vía `createSignedUrl` (cache de 1h en estado local).
-   - **PDFs / docs / hojas de cálculo**: ícono coloreado por tipo (lo que ya hay hoy), pero más prominente.
-   - HEIC se mostrará como ícono de imagen (los browsers no lo renderizan nativamente).
+**1. Nueva Edge Function `send-digest-cron`**
+- Sin auth de usuario: protegida con header `x-cron-secret` validado contra un nuevo secret `CHAMON_CRON_SECRET`.
+- Recibe `{ hour: number }` (hora PR actual, 0-23).
+- Query: `profiles` donde `digest_enabled=true` AND `digest_hour = hour`.
+- Para cada profile: ejecuta la misma lógica de `send-digest-now` (focus + overdue + render + Resend + insert en `notifications`) usando service role.
+- Refactor: extraer la lógica de armar/enviar el email a un helper compartido (`_shared/digest.ts`) usado por ambas functions para evitar duplicación.
 
-2. **Click → Modal de preview** usando el `Dialog` de shadcn ya instalado:
-   - **Imágenes**: se muestran a tamaño completo (max 80vh) con fondo oscuro.
-   - **PDFs**: se embebe en un `<iframe>` con la signed URL (los browsers tienen viewer nativo).
-   - **Otros tipos** (Word/Excel/CSV/TXT): el modal muestra ícono grande + nombre + tamaño + botón "Descargar" (no hay viewer nativo razonable sin librerías pesadas).
-   - Header del modal: nombre del archivo, tamaño, botones Descargar y Cerrar.
+**2. Cron job (pg_cron + pg_net)**
+- Habilitar extensiones `pg_cron` y `pg_net` si no lo están.
+- Programar job `chamon-digest-hourly` que corra cada hora en punto (`0 * * * *`).
+- El body calcula la hora actual en `America/Puerto_Rico` y la pasa como `hour` para que la function filtre los profiles que pidieron esa hora.
+- SQL insertado vía supabase tool (no migración) porque contiene URL del proyecto y secret.
 
-3. **Comportamiento de los iconitos existentes**:
-   - El botón Download (⬇) y Delete (🗑) se mantienen visibles a la derecha de cada item — no se rompe el flujo actual.
-   - Click en el thumbnail o en el nombre → abre preview. Click en los botones → acción directa (con `stopPropagation`).
+**3. Secret nuevo**
+- `CHAMON_CRON_SECRET`: string aleatorio que valida que la llamada viene de pg_cron y no de internet abierto.
 
-## Detalles técnicos
+**4. UI tweak menor en Settings**
+- Quitar el disclaimer "Phase 2 pendiente" si lo hubiera; añadir microcopy: "Recibirás el digest cada día a la hora seleccionada (zona PR)."
 
-**Archivo a editar**: `src/components/AttachmentsList.tsx`
+### Detalles técnicos
 
-- Añadir estado `previewItem: Attachment | null` y `thumbUrls: Record<string, string>`.
-- En `load()`, después de traer los attachments, para los que sean imagen generar signed URLs en batch (`createSignedUrls`, expiración 3600s) y guardar en `thumbUrls`.
-- Reemplazar el `<Icon>` actual por:
-  - `<img src={thumbUrls[a.id]} class="h-10 w-10 rounded object-cover" />` si es imagen y la URL existe.
-  - Ícono grande (h-10 w-10) en caja con bg sutil para no-imágenes.
-- Hacer la fila clickable (`onClick={() => setPreviewItem(a)}`), aplicando `stopPropagation` en los botones existentes.
-- Nuevo `<Dialog open={!!previewItem}>` al final del componente con la lógica de render por mime type.
+- Timezone: el cálculo de "hora actual PR" se hace en SQL con `EXTRACT(HOUR FROM (now() AT TIME ZONE 'America/Puerto_Rico'))`. PR no tiene DST, así que es estable.
+- Idempotencia básica: insertamos en `notifications` con `type='digest'` y un check opcional para no enviar dos veces el mismo día al mismo user (query previo por `sent_at::date = today AND type='digest' AND user_id=X`).
+- Errores por usuario no detienen el batch: try/catch por profile, log a `notifications` con `status='failed'`.
+- Respeta el setting `preferred_language` (es/en) que ya existe en `send-digest-now`.
 
-**Sin nuevas dependencias** — `Dialog`, `lucide-react` y Supabase Storage ya están en uso. Sin cambios de DB ni de RLS.
+### Tests / verificación
 
-**Performance**: signed URLs se generan una vez por carga del componente y se cachean en estado. Se invalidan con cada `load()` (que ya ocurre tras upload/delete), bien dentro de la ventana de 1h.
+1. Crear secret `CHAMON_CRON_SECRET`.
+2. Llamar manualmente la function con curl + secret + `{hour: <hora actual PR>}` → debe enviar a tu profile.
+3. Llamar con secret incorrecto → 401.
+4. Verificar `cron.job` que el schedule existe.
+5. Esperar a la próxima hora en punto y confirmar envío automático.
 
-## Out of scope (puedo añadirlo si lo pides)
-
-- Generar thumbnails reales server-side (resize) — los browsers cargarán la imagen completa para la miniatura. Para 5 fotos de 1-2 MB es aceptable; si en el futuro hay 50+ adjuntos por misión conviene una edge function de resize.
-- Preview de Word/Excel/PPT inline (requeriría librerías pesadas o servicio externo).
-- Navegación con flechas entre adjuntos dentro del modal.
-
-¿Procedo?
+¿Confirmas que dale?
