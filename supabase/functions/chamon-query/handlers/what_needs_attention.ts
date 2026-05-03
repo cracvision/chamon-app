@@ -25,13 +25,13 @@ export async function handleWhatNeedsAttention(
   const horizonIso = horizon.toISOString().slice(0, 10);
 
   const { data: missions, error } = await scopedTable(supabase, "missions", userId)
-    .select("id,title,priority,due_date,health,cost_of_inaction_weekly,status")
+    .select("id,title,priority,due_date,health,status")
     .eq("status", "active");
   if (error) throw error;
 
   const mList = (missions ?? []) as Array<{
     id: string; title: string; priority: string; due_date: string | null;
-    health: string | null; cost_of_inaction_weekly: number; status: string;
+    health: string | null; status: string;
   }>;
 
   if (mList.length === 0) {
@@ -72,15 +72,6 @@ export async function handleWhatNeedsAttention(
         score += Math.min(24, od * 8);
       }
 
-      const coi = Number(m.cost_of_inaction_weekly);
-      if (coi > 200) {
-        reasons.push(`COI alto $${Math.round(coi)}/sem`);
-        score += 20;
-      } else if (coi > 50) {
-        reasons.push(`COI alto $${Math.round(coi)}/sem`);
-        score += 10;
-      }
-
       if (m.priority === "high") {
         reasons.push("prioridad alta");
         score += 10;
@@ -105,7 +96,6 @@ export async function handleWhatNeedsAttention(
       priority: mission.priority,
       health: mission.health ?? "ok",
       due: dueLabelEs(mission.due_date),
-      coi_weekly: Number(mission.cost_of_inaction_weekly),
       urgency_score: score,
       reasons,
     })),

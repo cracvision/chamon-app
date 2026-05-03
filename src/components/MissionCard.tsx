@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { Mission, Task } from "@/lib/queries";
-import { computeHealth, formatMoney } from "@/lib/format";
+import { computeHealth } from "@/lib/format";
 import { useI18n } from "@/lib/i18n";
 
 interface Props { mission: Mission; tasks: Task[]; index: number; selected?: boolean; onSelect?: () => void }
@@ -44,9 +44,6 @@ export function MissionCard({ mission, tasks, index, selected, onSelect }: Props
         </div>
         <div className="flex items-center justify-between font-mono text-[11px] text-muted-foreground">
           <span>{open} {t("mission.openCount")} · {pct}%</span>
-          {mission.cost_of_inaction_weekly > 0 && (
-            <span className="text-destructive">{formatMoney(Number(mission.cost_of_inaction_weekly))}{t("kpi.perWeek")}</span>
-          )}
         </div>
       </div>
     </button>

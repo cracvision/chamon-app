@@ -24,7 +24,6 @@ Deno.test("create_mission — happy path (auto code, Spanish message)", async ()
       area_id,
       title: `__test_mission_${Date.now()}`,
       priority: "high",
-      cost_of_inaction_weekly: 30,
     },
   });
   assertEquals(status, 200);

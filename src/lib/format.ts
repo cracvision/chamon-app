@@ -29,7 +29,7 @@ export function dueLabel(iso: string | null | undefined, t: (k: any, v?: any) =>
 export type Health = "ok" | "warn" | "crit";
 
 export function computeHealth(
-  mission: { health: string | null; due_date: string | null; cost_of_inaction_weekly: number },
+  mission: { health: string | null; due_date: string | null },
   tasks: { due_date: string | null; status: string }[]
 ): Health {
   if (mission.health) return mission.health as Health;
@@ -44,6 +44,5 @@ export function computeHealth(
     const d = daysFromToday(tk.due_date);
     if (d !== null && d <= 7) return "warn";
   }
-  if (mission.cost_of_inaction_weekly > 50) return "warn";
   return "ok";
 }

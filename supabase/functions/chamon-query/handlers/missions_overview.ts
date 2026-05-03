@@ -3,7 +3,7 @@ import { dueLabelEs, MSG, priorityEs, statusEs } from "../../_shared/format.ts";
 
 export async function handleMissionsOverview(supabase: ChamonClient, userId: string) {
   const { data, error } = await scopedTable(supabase, "missions", userId)
-    .select("id,title,status,priority,due_date,health,cost_of_inaction_weekly,area_id")
+    .select("id,title,status,priority,due_date,health,area_id")
     .eq("status", "active")
     .order("priority", { ascending: false })
     .order("due_date", { ascending: true, nullsFirst: false });
@@ -12,7 +12,7 @@ export async function handleMissionsOverview(supabase: ChamonClient, userId: str
   const list = (data ?? []) as Array<{
     id: string; title: string; status: string; priority: string;
     due_date: string | null; health: string | null;
-    cost_of_inaction_weekly: number; area_id: string | null;
+    area_id: string | null;
   }>;
 
   if (list.length === 0) {
@@ -39,7 +39,6 @@ export async function handleMissionsOverview(supabase: ChamonClient, userId: str
       priority: priorityEs(m.priority),
       due: dueLabelEs(m.due_date),
       health: m.health ?? "ok",
-      coi_weekly: Number(m.cost_of_inaction_weekly),
       open_tasks: counts.get(m.id) ?? 0,
     })),
   };

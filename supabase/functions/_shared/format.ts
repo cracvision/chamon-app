@@ -150,9 +150,6 @@ export function voiceErrorMessage(issues: any[]): string {
   if (path === "friction_level") {
     return "El nivel de fricción debe ser 1, 2 o 3.";
   }
-  if (path === "cost_of_inaction_weekly") {
-    return "El costo semanal de inacción debe ser un número entre 0 y 10000.";
-  }
   if (path === "is_today") {
     return "El campo is_today debe ser true o false.";
   }
