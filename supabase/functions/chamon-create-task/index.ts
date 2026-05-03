@@ -7,7 +7,7 @@
 import { z } from "https://esm.sh/zod@3.23.8";
 import { createServiceClient, scopedTable } from "../_shared/client.ts";
 import { verifyRequest } from "../_shared/auth.ts";
-import { MSG, formatDateEs, isValidIsoDate } from "../_shared/format.ts";
+import { MSG, formatDateEs, isValidIsoDate, voiceErrorMessage } from "../_shared/format.ts";
 import { CORS, jsonResponse as json } from "../_shared/cors.ts";
 import { writeAuditEvent } from "../_shared/audit.ts";
 
