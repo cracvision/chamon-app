@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.chamon-update-task]
 verify_jwt = false
+
+[functions.send-digest-cron]
+verify_jwt = false
