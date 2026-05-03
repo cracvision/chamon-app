@@ -104,12 +104,44 @@ function CalendarPage() {
                     })}
                     {list.length > 3 && <li className="font-mono text-[10px] text-muted-foreground">+{list.length - 3}</li>}
                   </ul>
+                  {list.length > 0 && (
+                    <button
+                      onClick={() => setOpenDay(cell.iso)}
+                      className="mt-1.5 inline-flex w-full items-center justify-center gap-1 rounded-sm border border-border bg-card-elevated px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground hover:border-accent hover:text-accent"
+                    >
+                      <Eye className="h-3 w-3" />{t("calendar.showDetail")}
+                    </button>
+                  )}
                 </>
               )}
             </div>
           );
         })}
       </div>
+
+      <Sheet open={!!openDay} onOpenChange={(o) => !o && setOpenDay(null)}>
+        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
+          <SheetHeader>
+            <SheetTitle>{t("calendar.dayDetail")} · {openDay}</SheetTitle>
+          </SheetHeader>
+          {openDay && (() => {
+            const dayTasks = byDate.get(openDay) || [];
+            const missionIds = Array.from(new Set(dayTasks.map(tk => tk.mission_id)));
+            const dayMissions = missionIds.map(id => missions.find(m => m.id === id)).filter(Boolean) as typeof missions;
+            return (
+              <div className="mt-4 flex flex-col gap-6">
+                {dayMissions.length === 0 && <p className="text-xs text-muted-foreground">—</p>}
+                {dayMissions.map(m => (
+                  <div key={m.id} className="flex flex-col gap-3">
+                    <MissionDetail mission={m} tasks={tasks} areas={areas} />
+                    <MissionDangerZone missionId={m.id} />
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
