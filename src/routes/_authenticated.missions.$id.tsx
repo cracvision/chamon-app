@@ -25,6 +25,9 @@ function MissionPage() {
       <div className="surface p-5">
         <MissionDetail mission={mission} tasks={tasks} areas={areas} />
       </div>
+      <div className="mt-5">
+        <MissionDangerZone missionId={mission.id} />
+      </div>
     </div>
   );
 }
