@@ -14,7 +14,9 @@ function CalendarPage() {
   const { t } = useI18n();
   const { data: tasks = [] } = useTasks();
   const { data: missions = [] } = useMissions();
+  const { data: areas = [] } = useAreas();
   const [cursor, setCursor] = useState(() => { const d = new Date(); d.setDate(1); return d; });
+  const [openDay, setOpenDay] = useState<string | null>(null);
 
   const grid = useMemo(() => {
     const first = new Date(cursor); first.setDate(1);
