@@ -164,7 +164,6 @@ Deno.serve(async (req) => {
         conversation_id: parsed.conversation_id,
         area_id: parsed.area_id,
         priority: parsed.priority,
-        cost_of_inaction_weekly: parsed.cost_of_inaction_weekly,
         mission_title: parsed.title,
       },
     });
@@ -184,13 +183,11 @@ Deno.serve(async (req) => {
       title: parsed.title,
       code: created.code,
       priority: parsed.priority,
-      cost_of_inaction_weekly: parsed.cost_of_inaction_weekly,
       audit_event_id: auditId,
       message: buildMessage({
         title: parsed.title,
         area_name: area.name,
         priority: parsed.priority!,
-        cost_of_inaction_weekly: parsed.cost_of_inaction_weekly!,
         due_date: parsed.due_date ?? null,
       }),
     });
