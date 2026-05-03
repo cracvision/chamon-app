@@ -1,8 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useTasks, useMissions } from "@/lib/queries";
+import { useTasks, useMissions, useAreas } from "@/lib/queries";
 import { useI18n } from "@/lib/i18n";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Eye } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { MissionDetail, MissionDangerZone } from "@/components/MissionDetail";
 
 export const Route = createFileRoute("/_authenticated/calendar")({
   component: CalendarPage,
