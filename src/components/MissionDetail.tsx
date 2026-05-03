@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useI18n } from "@/lib/i18n";
 import { useUpdateMission, useUpdateTask, useCreateTask, useSoftDeleteMission, useSoftDeleteTask, useReorderTasks, type Mission, type Task, type Area } from "@/lib/queries";
-import { dueLabel, daysFromToday, formatMoney, computeHealth } from "@/lib/format";
+import { dueLabel, daysFromToday, computeHealth } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -78,16 +78,9 @@ export function MissionDetail({ mission, tasks, areas }: Props) {
       </div>
 
       {/* Stat row */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-2 gap-2">
         <Stat label={t("section.tasks")} value={`${total - open}/${total}`} hint={`${pct}%`} />
         <Stat label={t("mission.dueDate")} value={mission.due_date ? dueLabel(mission.due_date, t) : "—"} hint={mission.due_date || ""} />
-        <Stat
-          label={t("kpi.coi")}
-          value={formatMoney(Number(mission.cost_of_inaction_weekly))}
-          hint={t("kpi.perWeek").replace("/", "")}
-          danger={Number(mission.cost_of_inaction_weekly) > 50}
-          tooltip={t("mission.coi.tooltip")}
-        />
       </div>
 
       {/* Editable fields */}
@@ -114,11 +107,6 @@ export function MissionDetail({ mission, tasks, areas }: Props) {
         <FieldInline label={t("mission.dueDate")}>
           <Input type="date" defaultValue={mission.due_date || ""}
             onBlur={e => patchMission({ due_date: e.target.value || null })}
-            className="h-9 border-border bg-card-elevated font-mono" />
-        </FieldInline>
-        <FieldInline label={t("mission.coi")}>
-          <Input type="number" min="0" step="1" defaultValue={String(mission.cost_of_inaction_weekly)}
-            onBlur={e => patchMission({ cost_of_inaction_weekly: Number(e.target.value) || 0 })}
             className="h-9 border-border bg-card-elevated font-mono" />
         </FieldInline>
       </div>

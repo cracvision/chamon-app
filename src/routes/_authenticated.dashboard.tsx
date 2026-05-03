@@ -1,12 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
 import { useMissions, useTasks, useAreas } from "@/lib/queries";
+import { formatMoney } from "@/lib/format";
 import { MissionCard } from "@/components/MissionCard";
 import { FocusTaskCard } from "@/components/FocusTaskCard";
 import { MissionDetail, MissionDangerZone } from "@/components/MissionDetail";
 import { useI18n } from "@/lib/i18n";
 import { formatMoney, dueLabel, daysFromToday } from "@/lib/format";
-import { Target, ListTodo, AlertTriangle, TrendingUp, Sun } from "lucide-react";
+import { Target, ListTodo, Flame, TrendingUp, Sun } from "lucide-react";
+import { useUserStats } from "@/lib/queries";
 import { Link } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
