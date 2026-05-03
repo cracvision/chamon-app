@@ -16,6 +16,7 @@ import { handleMissionDetails } from "./handlers/mission_details.ts";
 import { handleWhatNeedsAttention } from "./handlers/what_needs_attention.ts";
 import { handleOverdue } from "./handlers/overdue.ts";
 import { handleSearch } from "./handlers/search.ts";
+import { handleXpStatus } from "./handlers/xp_status.ts";
 
 function bad(message: string, reason: string) {
   return json({ ok: false, error: MSG.badRequest, reason, message }, 400);
@@ -94,6 +95,9 @@ Deno.serve(async (req) => {
       }
       case "overdue":
         result = await handleOverdue(supabase, userId);
+        break;
+      case "xp_status":
+        result = await handleXpStatus(supabase, userId);
         break;
       case "search": {
         const query = typeof params.query === "string" ? params.query.trim() : "";
