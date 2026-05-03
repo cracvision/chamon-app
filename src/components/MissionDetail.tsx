@@ -1,16 +1,19 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useI18n } from "@/lib/i18n";
-import { useUpdateMission, useUpdateTask, useCreateTask, useSoftDeleteMission, useSoftDeleteTask, type Mission, type Task, type Area } from "@/lib/queries";
+import { useUpdateMission, useUpdateTask, useCreateTask, useSoftDeleteMission, useSoftDeleteTask, useReorderTasks, type Mission, type Task, type Area } from "@/lib/queries";
 import { dueLabel, daysFromToday, formatMoney, computeHealth } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { ArrowUpRight, Trash2, Plus, Sun, Info } from "lucide-react";
+import { ArrowUpRight, Trash2, Plus, Sun, Info, Pencil, GripVertical, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { AttachmentsList } from "./AttachmentsList";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface Props { mission: Mission; tasks: Task[]; areas: Area[] }
 
