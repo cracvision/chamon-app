@@ -29,7 +29,7 @@ export async function handleMissionDetails(
   const mission = (missionRows as Array<{
     id: string; title: string; description: string | null; status: string;
     priority: string; due_date: string | null; health: string | null;
-    cost_of_inaction_weekly: number; reward_text: string | null; area_id: string | null;
+    reward_text: string | null; area_id: string | null;
   }> | null)?.[0];
   if (!mission) return { found: false, message: MSG.notFound };
 
@@ -53,7 +53,6 @@ export async function handleMissionDetails(
       priority: priorityEs(mission.priority),
       due: dueLabelEs(mission.due_date),
       health: mission.health ?? "ok",
-      coi_weekly: Number(mission.cost_of_inaction_weekly),
       reward: mission.reward_text,
     },
     tasks: {
