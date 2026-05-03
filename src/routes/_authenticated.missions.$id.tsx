@@ -1,6 +1,6 @@
 import { createFileRoute, useParams, Link } from "@tanstack/react-router";
 import { useMissions, useTasks, useAreas } from "@/lib/queries";
-import { MissionDetail } from "@/components/MissionDetail";
+import { MissionDetail, MissionDangerZone } from "@/components/MissionDetail";
 import { useI18n } from "@/lib/i18n";
 import { ArrowLeft } from "lucide-react";
 
