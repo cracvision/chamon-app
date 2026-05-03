@@ -238,6 +238,10 @@ const dict = {
     "filter.active": "Active",
     "filter.completed": "Completed",
     "filter.archived": "Archived",
+    "danger.zone": "danger zone",
+    "danger.mission.desc": "This action deletes the entire mission, including its tasks and attachments.",
+    "danger.mission.button": "Delete mission",
+    "danger.mission.confirm": "Delete this mission? This action cannot be undone.",
   },
 } as const;
 
