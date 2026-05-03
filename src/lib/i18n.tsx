@@ -118,6 +118,10 @@ const dict = {
     "filter.active": "Activas",
     "filter.completed": "Completadas",
     "filter.archived": "Archivadas",
+    "danger.zone": "zona peligrosa",
+    "danger.mission.desc": "Esta acción elimina la misión completa, incluyendo sus tareas y adjuntos.",
+    "danger.mission.button": "Borrar misión",
+    "danger.mission.confirm": "¿Borrar esta misión? Esta acción no se puede deshacer.",
   },
   en: {
     "app.name": "Mission Control",
