@@ -10,7 +10,7 @@
 import { z } from "https://esm.sh/zod@3.23.8";
 import { ChamonClient, createServiceClient, scopedTable } from "../_shared/client.ts";
 import { verifyRequest } from "../_shared/auth.ts";
-import { MSG, formatDateEs, formatDollars, priorityEs } from "../_shared/format.ts";
+import { MSG, formatDateEs, formatDollars, isValidIsoDate, priorityEs } from "../_shared/format.ts";
 import { CORS, jsonResponse as json } from "../_shared/cors.ts";
 import { writeAuditEvent } from "../_shared/audit.ts";
 
@@ -18,7 +18,7 @@ const CreateMissionSchema = z.object({
   area_id: z.string().uuid(),
   title: z.string().min(1).max(200),
   description: z.string().max(2000).nullable().optional(),
-  due_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
+  due_date: z.string().refine(isValidIsoDate, { message: "fecha_invalida" }).nullable().optional(),
   priority: z.enum(["low", "mid", "high"]).optional().default("mid"),
   cost_of_inaction_weekly: z.number().min(0).max(10000).optional().default(0),
   reward_text: z.string().max(500).nullable().optional(),
@@ -116,8 +116,16 @@ Deno.serve(async (req) => {
     }
     parsed = CreateMissionSchema.parse(body);
   } catch (e) {
+    const dateErr = e instanceof z.ZodError && e.errors.some((er) => er.path[0] === "due_date");
     return json(
-      { ok: false, error: MSG.badRequest, reason: e instanceof z.ZodError ? "validation" : "invalid_json" },
+      {
+        ok: false,
+        error: MSG.badRequest,
+        reason: e instanceof z.ZodError ? "validation" : "invalid_json",
+        message: dateErr
+          ? "La fecha que pasaste no es válida. Pásamela como año-mes-día, por ejemplo 2026-05-15, o sin fecha."
+          : "No pude crear la mission. Revisá los datos e intentá de nuevo.",
+      },
       400,
     );
   }

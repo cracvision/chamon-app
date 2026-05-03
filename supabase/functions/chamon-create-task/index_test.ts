@@ -107,3 +107,13 @@ Deno.test("create_task — ElevenLabs-style: due_date='' coerces to null", async
   assertEquals(json.due_date, null);
   assertEquals(json.is_today, false);
 });
+
+Deno.test("create_task — due_date='2026-13-45' → 400 with voice-friendly message", async () => {
+  const mission_id = await getAnyMissionId();
+  const { status, json } = await call({
+    fn: FN,
+    body: { mission_id, title: "x", due_date: "2026-13-45" },
+  });
+  assertEquals(status, 400);
+  assert(json.message.includes("año-mes-día"));
+});

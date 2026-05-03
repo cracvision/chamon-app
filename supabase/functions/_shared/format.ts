@@ -75,6 +75,16 @@ export function formatDateEs(iso: string | null | undefined): string {
   return `el ${WEEKDAYS_ES[d.getDay()]} ${d.getDate()} de ${MONTHS_ES[d.getMonth()]}`;
 }
 
+/**
+ * Validates that a YYYY-MM-DD string is a real calendar date (not just regex-shaped).
+ * Catches: month >12, day >31, impossible days like Feb 31 / Apr 31 / non-leap Feb 29.
+ */
+export function isValidIsoDate(s: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
+  const d = new Date(s + "T00:00:00Z");
+  return !isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s;
+}
+
 /** Round to whole dollars for voice. 87.5 → "$88". */
 export function formatDollars(n: number): string {
   return `$${Math.round(n)}`;
