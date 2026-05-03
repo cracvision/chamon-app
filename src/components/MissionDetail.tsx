@@ -136,12 +136,27 @@ export function MissionDetail({ mission, tasks, areas }: Props) {
           <p className="label-mono">{t("section.tasks")} · {total}</p>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          {myTasks.length === 0 && <p className="rounded-md border border-dashed border-border bg-card-elevated px-3 py-3 text-xs text-muted-foreground">{t("task.empty")}</p>}
-          {myTasks.map(tk => (
-            <TaskRow key={tk.id} task={tk} onUpdate={(p) => updateTask.mutate({ id: tk.id, patch: p })} onDelete={() => deleteTask.mutate(tk.id)} />
-          ))}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={(e: DragEndEvent) => {
+            const { active, over } = e;
+            if (!over || active.id === over.id) return;
+            const oldIdx = myTasks.findIndex(t => t.id === active.id);
+            const newIdx = myTasks.findIndex(t => t.id === over.id);
+            const reordered = arrayMove(myTasks, oldIdx, newIdx);
+            reorderTasks.mutate(reordered.map((t, i) => ({ id: t.id, sort_order: i })));
+          }}
+        >
+          <SortableContext items={myTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+            <div className="flex flex-col gap-1.5">
+              {myTasks.length === 0 && <p className="rounded-md border border-dashed border-border bg-card-elevated px-3 py-3 text-xs text-muted-foreground">{t("task.empty")}</p>}
+              {myTasks.map(tk => (
+                <TaskRow key={tk.id} task={tk} onUpdate={(p) => updateTask.mutate({ id: tk.id, patch: p })} onDelete={() => deleteTask.mutate(tk.id)} />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
 
         <form onSubmit={addTask} className="mt-1 flex items-center gap-2 rounded-md border border-border bg-card-elevated p-2">
           <Plus className="h-4 w-4 text-muted-foreground" />
