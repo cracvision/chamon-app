@@ -51,7 +51,7 @@ Deno.test("create_mission — Zod rejects bad input (400)", async () => {
   assertEquals(status, 400);
 });
 
-import { assert as _assert } from "https://deno.land/std@0.224.0/assert/mod.ts";
+// (assert already imported above)
 
 Deno.test("create_mission — due_date='2026-02-31' → 400 with voice-friendly message", async () => {
   const { json: areasJson } = await call({ fn: "chamon-query", body: { query_type: "missions_overview" } });
@@ -67,5 +67,5 @@ Deno.test("create_mission — due_date='2026-02-31' → 400 with voice-friendly 
     body: { area_id, title: "x", due_date: "2026-02-31" },
   });
   assertEquals(status, 400);
-  _assert(typeof json.message === "string" && json.message.includes("año-mes-día"));
+  assert(typeof json.message === "string" && json.message.includes("año-mes-día"));
 });
