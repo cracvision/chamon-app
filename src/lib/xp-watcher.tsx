@@ -21,7 +21,7 @@ export function XpWatcher() {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return;
       chan = supabase
-        .channel("xp_watch")
+        .channel(`xp_watch_${u.user.id}_${Math.random().toString(36).slice(2, 8)}`)
         .on("postgres_changes", {
           event: "INSERT", schema: "public", table: "xp_events",
           filter: `user_id=eq.${u.user.id}`,
