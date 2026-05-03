@@ -122,6 +122,8 @@ const dict = {
     "danger.mission.desc": "Esta acción elimina la misión completa, incluyendo sus tareas y adjuntos.",
     "danger.mission.button": "Borrar misión",
     "danger.mission.confirm": "¿Borrar esta misión? Esta acción no se puede deshacer.",
+    "calendar.showDetail": "Mostrar detalle",
+    "calendar.dayDetail": "Detalle del día",
   },
   en: {
     "app.name": "Mission Control",
