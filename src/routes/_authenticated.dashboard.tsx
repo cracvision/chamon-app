@@ -1,15 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState, useEffect } from "react";
-import { useMissions, useTasks, useAreas } from "@/lib/queries";
-import { formatMoney } from "@/lib/format";
+import { useMissions, useTasks, useAreas, useUserStats } from "@/lib/queries";
 import { MissionCard } from "@/components/MissionCard";
 import { FocusTaskCard } from "@/components/FocusTaskCard";
 import { MissionDetail, MissionDangerZone } from "@/components/MissionDetail";
 import { useI18n } from "@/lib/i18n";
-import { formatMoney, dueLabel, daysFromToday } from "@/lib/format";
-import { Target, ListTodo, Flame, TrendingUp, Sun } from "lucide-react";
-import { useUserStats } from "@/lib/queries";
-import { Link } from "@tanstack/react-router";
+import { dueLabel, daysFromToday } from "@/lib/format";
+import { Target, ListTodo, Flame, Trophy, Sun } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
@@ -20,6 +17,7 @@ function Dashboard() {
   const { data: missions = [], isLoading: ml } = useMissions();
   const { data: tasks = [], isLoading: tl } = useTasks();
   const { data: areas = [] } = useAreas();
+  const { data: stats } = useUserStats();
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const activeMissions = missions.filter(m => m.status === "active");
@@ -30,11 +28,6 @@ function Dashboard() {
 
   const todayTasks = tasks.filter(tk => tk.is_today && tk.status !== "done");
   const openCount = tasks.filter(tk => tk.status !== "done").length;
-  const coiTotal = activeMissions.reduce((s, m) => s + Number(m.cost_of_inaction_weekly || 0), 0);
-  const last7 = useMemo(() => {
-    const cutoff = Date.now() - 7 * 24 * 3600 * 1000;
-    return tasks.filter(tk => tk.completed_at && new Date(tk.completed_at).getTime() >= cutoff).length;
-  }, [tasks]);
 
   const upcoming = useMemo(() => {
     return tasks
@@ -51,8 +44,8 @@ function Dashboard() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi icon={Target} label={t("kpi.activeMissions")} value={String(activeMissions.length)} />
         <Kpi icon={ListTodo} label={t("kpi.openTasks")} value={String(openCount)} />
-        <Kpi icon={AlertTriangle} label={t("kpi.coi")} value={formatMoney(coiTotal)} hint={t("kpi.perWeek")} danger={coiTotal > 0} />
-        <Kpi icon={TrendingUp} label={t("kpi.momentum")} value={String(last7)} hint="completed" />
+        <Kpi icon={Trophy} label="XP" value={String(stats?.total_xp ?? 0)} hint={stats?.level_name || "Recluta"} />
+        <Kpi icon={Flame} label="Racha" value={String(stats?.current_streak ?? 0)} hint="días" />
       </div>
 
       {/* Two-column */}
