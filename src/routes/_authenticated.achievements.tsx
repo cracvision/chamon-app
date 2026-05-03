@@ -84,8 +84,8 @@ function AchievementsPage() {
                 }`}
               >
                 <div className="text-3xl">{a.icon}</div>
-                <p className="text-[12px] font-medium leading-tight">{a.name}</p>
-                <p className="text-[10px] leading-tight text-muted-foreground">{a.description}</p>
+                <p className="text-[12px] font-medium leading-tight">{trophyText(a.id, lang).name ?? a.name}</p>
+                <p className="text-[10px] leading-tight text-muted-foreground">{trophyText(a.id, lang).description ?? a.description}</p>
                 {unlocked ? (
                   <span className="font-mono text-[9px] uppercase tracking-widest text-accent">{t("ach.unlocked")}</span>
                 ) : (
