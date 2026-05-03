@@ -1,16 +1,19 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { useI18n } from "@/lib/i18n";
-import { useUpdateMission, useUpdateTask, useCreateTask, useSoftDeleteMission, useSoftDeleteTask, type Mission, type Task, type Area } from "@/lib/queries";
+import { useUpdateMission, useUpdateTask, useCreateTask, useSoftDeleteMission, useSoftDeleteTask, useReorderTasks, type Mission, type Task, type Area } from "@/lib/queries";
 import { dueLabel, daysFromToday, formatMoney, computeHealth } from "@/lib/format";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { ArrowUpRight, Trash2, Plus, Sun, Info } from "lucide-react";
+import { ArrowUpRight, Trash2, Plus, Sun, Info, Pencil, GripVertical, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import { AttachmentsList } from "./AttachmentsList";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface Props { mission: Mission; tasks: Task[]; areas: Area[] }
 
@@ -20,6 +23,8 @@ export function MissionDetail({ mission, tasks, areas }: Props) {
   const updateTask = useUpdateTask();
   const createTask = useCreateTask();
   const deleteTask = useSoftDeleteTask();
+  const reorderTasks = useReorderTasks();
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const myTasks = tasks.filter(tk => tk.mission_id === mission.id);
   const open = myTasks.filter(tk => tk.status !== "done").length;
@@ -131,12 +136,27 @@ export function MissionDetail({ mission, tasks, areas }: Props) {
           <p className="label-mono">{t("section.tasks")} · {total}</p>
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          {myTasks.length === 0 && <p className="rounded-md border border-dashed border-border bg-card-elevated px-3 py-3 text-xs text-muted-foreground">{t("task.empty")}</p>}
-          {myTasks.map(tk => (
-            <TaskRow key={tk.id} task={tk} onUpdate={(p) => updateTask.mutate({ id: tk.id, patch: p })} onDelete={() => deleteTask.mutate(tk.id)} />
-          ))}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={(e: DragEndEvent) => {
+            const { active, over } = e;
+            if (!over || active.id === over.id) return;
+            const oldIdx = myTasks.findIndex(t => t.id === active.id);
+            const newIdx = myTasks.findIndex(t => t.id === over.id);
+            const reordered = arrayMove(myTasks, oldIdx, newIdx);
+            reorderTasks.mutate(reordered.map((t, i) => ({ id: t.id, sort_order: i })));
+          }}
+        >
+          <SortableContext items={myTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+            <div className="flex flex-col gap-1.5">
+              {myTasks.length === 0 && <p className="rounded-md border border-dashed border-border bg-card-elevated px-3 py-3 text-xs text-muted-foreground">{t("task.empty")}</p>}
+              {myTasks.map(tk => (
+                <TaskRow key={tk.id} task={tk} onUpdate={(p) => updateTask.mutate({ id: tk.id, patch: p })} onDelete={() => deleteTask.mutate(tk.id)} />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
 
         <form onSubmit={addTask} className="mt-1 flex items-center gap-2 rounded-md border border-border bg-card-elevated p-2">
           <Plus className="h-4 w-4 text-muted-foreground" />
@@ -223,25 +243,73 @@ function TaskRow({ task, onUpdate, onDelete }: { task: Task; onUpdate: (p: Parti
   const { t } = useI18n();
   const days = daysFromToday(task.due_date);
   const overdue = days !== null && days < 0 && task.status !== "done";
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: task.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+
+  const [editing, setEditing] = useState(false);
+  const [draftTitle, setDraftTitle] = useState(task.title);
+
+  const saveTitle = () => {
+    const v = draftTitle.trim();
+    if (v && v !== task.title) onUpdate({ title: v });
+    else setDraftTitle(task.title);
+    setEditing(false);
+  };
 
   return (
-    <details className="group rounded-md border border-border bg-card-elevated">
+    <details ref={setNodeRef} style={style} className="group rounded-md border border-border bg-card-elevated">
       <summary className="flex cursor-pointer items-center gap-2 px-2.5 py-2 list-none">
+        <button
+          {...attributes}
+          {...listeners}
+          onClick={e => e.preventDefault()}
+          title="Arrastra para reordenar"
+          className="cursor-grab touch-none rounded p-0.5 text-muted-foreground hover:text-foreground active:cursor-grabbing"
+        >
+          <GripVertical className="h-3.5 w-3.5" />
+        </button>
         <input type="checkbox" checked={task.status === "done"}
           onClick={e => e.stopPropagation()}
           onChange={e => onUpdate({ status: e.target.checked ? "done" : "todo" })}
           className="h-4 w-4 cursor-pointer accent-[var(--accent)]" />
-        <span className={`flex-1 text-sm ${task.status === "done" ? "text-muted-foreground line-through" : "text-foreground"}`}>
-          {task.title}
-        </span>
-        <span className={`font-mono text-[10px] uppercase tracking-wider ${overdue ? "text-destructive" : "text-muted-foreground"}`}>
-          {dueLabel(task.due_date, t)}
-        </span>
-        <button onClick={e => { e.preventDefault(); onUpdate({ is_today: !task.is_today }); }}
-          title={task.is_today ? t("task.unmarkToday") : t("task.markToday")}
-          className={`rounded p-1 ${task.is_today ? "text-accent" : "text-muted-foreground hover:text-foreground"}`}>
-          <Sun className="h-3.5 w-3.5" />
-        </button>
+        {editing ? (
+          <div className="flex flex-1 items-center gap-1" onClick={e => { e.preventDefault(); e.stopPropagation(); }}>
+            <Input
+              autoFocus
+              value={draftTitle}
+              onChange={e => setDraftTitle(e.target.value)}
+              onKeyDown={e => { if (e.key === "Enter") saveTitle(); if (e.key === "Escape") { setDraftTitle(task.title); setEditing(false); } }}
+              className="h-7 border-border bg-card text-sm"
+            />
+            <button onClick={saveTitle} className="rounded p-1 text-success hover:bg-card" title="Guardar">
+              <Check className="h-3.5 w-3.5" />
+            </button>
+            <button onClick={() => { setDraftTitle(task.title); setEditing(false); }} className="rounded p-1 text-muted-foreground hover:bg-card" title="Cancelar">
+              <X className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : (
+          <>
+            <span className={`flex-1 text-sm ${task.status === "done" ? "text-muted-foreground line-through" : "text-foreground"}`}>
+              {task.title}
+            </span>
+            <button
+              onClick={e => { e.preventDefault(); e.stopPropagation(); setDraftTitle(task.title); setEditing(true); }}
+              title="Editar tarea"
+              className="rounded p-1 text-muted-foreground opacity-0 group-hover:opacity-100 hover:text-accent"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </button>
+            <span className={`font-mono text-[10px] uppercase tracking-wider ${overdue ? "text-destructive" : "text-muted-foreground"}`}>
+              {dueLabel(task.due_date, t)}
+            </span>
+            <button onClick={e => { e.preventDefault(); onUpdate({ is_today: !task.is_today }); }}
+              title={task.is_today ? t("task.unmarkToday") : t("task.markToday")}
+              className={`rounded p-1 ${task.is_today ? "text-accent" : "text-muted-foreground hover:text-foreground"}`}>
+              <Sun className="h-3.5 w-3.5" />
+            </button>
+          </>
+        )}
       </summary>
       <div className="border-t border-border p-2.5">
         <div className="grid grid-cols-3 gap-2">
