@@ -27,7 +27,6 @@ export function QuickAddDialog({ open, onOpenChange, defaultMissionId }: Props) 
   const [mArea, setMArea] = useState<string>("");
   const [mPriority, setMPriority] = useState<"low"|"mid"|"high">("mid");
   const [mDue, setMDue] = useState("");
-  const [mCoi, setMCoi] = useState("0");
   const [mReward, setMReward] = useState("");
 
   // task state
@@ -37,7 +36,7 @@ export function QuickAddDialog({ open, onOpenChange, defaultMissionId }: Props) 
   const [tFriction, setTFriction] = useState<"1"|"2"|"3">("2");
   const [tToday, setTToday] = useState(false);
 
-  const reset = () => { setMTitle(""); setMDesc(""); setMDue(""); setMCoi("0"); setMReward(""); setTTitle(""); setTDue(""); setTToday(false); };
+  const reset = () => { setMTitle(""); setMDesc(""); setMDue(""); setMReward(""); setTTitle(""); setTDue(""); setTToday(false); };
 
   const submitMission = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +48,6 @@ export function QuickAddDialog({ open, onOpenChange, defaultMissionId }: Props) 
         area_id: mArea || null,
         priority: mPriority,
         due_date: mDue || null,
-        cost_of_inaction_weekly: Number(mCoi) || 0,
         reward_text: mReward || null,
       } as any);
       toast.success(t("saved"));
@@ -107,7 +105,6 @@ export function QuickAddDialog({ open, onOpenChange, defaultMissionId }: Props) 
                   </Select>
                 </Field>
                 <Field label={t("mission.dueDate")}><Input type="date" value={mDue} onChange={e => setMDue(e.target.value)} className="bg-card-elevated" /></Field>
-                <Field label={t("mission.coi")}><Input type="number" min="0" step="1" value={mCoi} onChange={e => setMCoi(e.target.value)} className="bg-card-elevated font-mono" /></Field>
               </div>
               <Field label={t("mission.reward")}><Input value={mReward} onChange={e => setMReward(e.target.value)} className="bg-card-elevated" /></Field>
               <Button type="submit" disabled={createMission.isPending} className="bg-accent text-accent-foreground hover:bg-accent/90">{t("create")}</Button>
