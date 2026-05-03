@@ -84,8 +84,8 @@ function AchievementsPage() {
                 }`}
               >
                 <div className="text-3xl">{a.icon}</div>
-                <p className="text-[12px] font-medium leading-tight">{a.name}</p>
-                <p className="text-[10px] leading-tight text-muted-foreground">{a.description}</p>
+                <p className="text-[12px] font-medium leading-tight">{trophyText(a.id, lang).name ?? a.name}</p>
+                <p className="text-[10px] leading-tight text-muted-foreground">{trophyText(a.id, lang).description ?? a.description}</p>
                 {unlocked ? (
                   <span className="font-mono text-[9px] uppercase tracking-widest text-accent">{t("ach.unlocked")}</span>
                 ) : (
@@ -154,6 +154,29 @@ function labelFor(reason: string, t: ReturnType<typeof useI18n>["t"]): string {
     case "achievement_unlocked": return t("ach.reason.achievement_unlocked");
     default: return reason;
   }
+}
+
+const TROPHY_I18N: Record<string, { en: { name: string; description: string } }> = {
+  first_step:       { en: { name: "First Step",        description: "Complete your first task" } },
+  ten_chest:        { en: { name: "Ten in the Chest",  description: "Complete 10 tasks" } },
+  centurion:        { en: { name: "Centurion",         description: "Complete 100 tasks" } },
+  mission_done:     { en: { name: "Mission Accomplished", description: "Complete your first mission" } },
+  commander:        { en: { name: "Commander",         description: "Complete 5 missions" } },
+  streak_3:         { en: { name: "Three in a Row",    description: "3-day streak" } },
+  streak_7:         { en: { name: "Unstoppable 7",     description: "7-day streak" } },
+  streak_30:        { en: { name: "Unstoppable 30",    description: "30-day streak" } },
+  xp_500:           { en: { name: "Operator",          description: "Earn 500 XP" } },
+  xp_1500:          { en: { name: "XP Commander",      description: "Earn 1500 XP" } },
+  xp_5000:          { en: { name: "Strategist",        description: "Earn 5000 XP" } },
+  early_bird_10:    { en: { name: "Early Bird",        description: "Complete 10 tasks before 9am" } },
+  resurrection:     { en: { name: "Resurrection",      description: "Complete a task overdue by more than 7 days" } },
+  legendary:        { en: { name: "Legendary Chamón",  description: "Earn 10,000 XP" } },
+  overdue_killer_3: { en: { name: "Debt Hunter",       description: "Earn 3 resurrections" } },
+};
+
+function trophyText(id: string, lang: string): { name?: string; description?: string } {
+  if (lang === "en" && TROPHY_I18N[id]) return TROPHY_I18N[id].en;
+  return {};
 }
 
 function StatCard({ icon: Icon, label, value, hint }: { icon: any; label: string; value: string; hint?: string }) {
