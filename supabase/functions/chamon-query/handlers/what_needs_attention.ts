@@ -25,7 +25,7 @@ export async function handleWhatNeedsAttention(
   const horizonIso = horizon.toISOString().slice(0, 10);
 
   const { data: missions, error } = await scopedTable(supabase, "missions", userId)
-    .select("id,title,priority,due_date,health,cost_of_inaction_weekly,status")
+    .select("id,title,priority,due_date,health,status")
     .eq("status", "active");
   if (error) throw error;
 

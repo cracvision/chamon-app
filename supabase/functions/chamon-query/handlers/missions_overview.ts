@@ -3,7 +3,7 @@ import { dueLabelEs, MSG, priorityEs, statusEs } from "../../_shared/format.ts";
 
 export async function handleMissionsOverview(supabase: ChamonClient, userId: string) {
   const { data, error } = await scopedTable(supabase, "missions", userId)
-    .select("id,title,status,priority,due_date,health,cost_of_inaction_weekly,area_id")
+    .select("id,title,status,priority,due_date,health,area_id")
     .eq("status", "active")
     .order("priority", { ascending: false })
     .order("due_date", { ascending: true, nullsFirst: false });

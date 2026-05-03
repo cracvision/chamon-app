@@ -22,7 +22,7 @@ export async function handleMissionDetails(
   if (!missionId) return { found: false, message: MSG.notFound };
 
   const { data: missionRows, error } = await scopedTable(supabase, "missions", userId)
-    .select("id,title,description,status,priority,due_date,health,cost_of_inaction_weekly,reward_text,area_id")
+    .select("id,title,description,status,priority,due_date,health,reward_text,area_id")
     .eq("id", missionId);
   if (error) throw error;
 
