@@ -219,7 +219,7 @@ export function AttachmentsList({ missionId, taskId }: Props) {
                       return <Icon className="h-16 w-16 text-info" />;
                     })()}
                     <p className="text-sm text-muted-foreground">
-                      {t("noPreviewAvailable") || "Vista previa no disponible para este tipo de archivo."}
+                      Vista previa no disponible para este tipo de archivo.
                     </p>
                     <button
                       onClick={() => download(previewItem)}
