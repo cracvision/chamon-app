@@ -153,26 +153,32 @@ export function MissionDetail({ mission, tasks, areas }: Props) {
         <AttachmentsList missionId={mission.id} />
       </div>
 
-      {/* Danger zone — borrar misión */}
-      <div className="mt-2 rounded-md border border-destructive/30 bg-destructive/5 p-4">
-        <p className="label-mono mb-1 text-destructive">zona peligrosa</p>
-        <p className="mb-3 text-xs text-muted-foreground">
-          Esta acción elimina la misión completa, incluyendo sus tareas y adjuntos.
-        </p>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => {
-            if (confirm("¿Borrar esta misión? Esta acción no se puede deshacer.")) {
-              deleteMission.mutate(mission.id);
-              toast.success(t("deleted"));
-            }
-          }}
-          className="h-9 w-full justify-center border border-destructive/40 text-xs font-semibold uppercase tracking-wider text-destructive hover:bg-destructive hover:text-destructive-foreground"
-        >
-          <Trash2 className="mr-2 h-4 w-4" />Borrar misión
-        </Button>
-      </div>
+    </div>
+  );
+}
+
+export function MissionDangerZone({ missionId }: { missionId: string }) {
+  const { t } = useI18n();
+  const deleteMission = useSoftDeleteMission();
+  return (
+    <div className="rounded-md border border-destructive/30 bg-destructive/5 p-4">
+      <p className="label-mono mb-1 text-destructive">zona peligrosa</p>
+      <p className="mb-3 text-xs text-muted-foreground">
+        Esta acción elimina la misión completa, incluyendo sus tareas y adjuntos.
+      </p>
+      <Button
+        size="sm"
+        variant="ghost"
+        onClick={() => {
+          if (confirm("¿Borrar esta misión? Esta acción no se puede deshacer.")) {
+            deleteMission.mutate(missionId);
+            toast.success(t("deleted"));
+          }
+        }}
+        className="h-9 w-full justify-center border border-destructive/40 text-xs font-semibold uppercase tracking-wider text-destructive hover:bg-destructive hover:text-destructive-foreground"
+      >
+        <Trash2 className="mr-2 h-4 w-4" />Borrar misión
+      </Button>
     </div>
   );
 }
