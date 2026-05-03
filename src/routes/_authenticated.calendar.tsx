@@ -61,11 +61,34 @@ function CalendarPage() {
         {grid.map((cell, i) => {
           const list = cell.iso ? byDate.get(cell.iso) || [] : [];
           const isToday = cell.iso === todayIso;
+          const openTasks = list.filter(tk => tk.status !== "done");
+          let urgency: "overdue" | "soon" | "later" | null = null;
+          if (cell.date && openTasks.length > 0) {
+            const cellDate = new Date(cell.iso + "T00:00:00");
+            const today = new Date(); today.setHours(0,0,0,0);
+            const diffDays = Math.round((cellDate.getTime() - today.getTime()) / 86400000);
+            if (diffDays < 0) urgency = "overdue";
+            else if (diffDays <= 1) urgency = "soon";
+            else urgency = "later";
+          }
+          const urgencyClass =
+            urgency === "overdue" ? "ring-1 ring-inset ring-destructive/60 bg-destructive/5"
+            : urgency === "soon"  ? "ring-1 ring-inset ring-warn/60 bg-warn/5"
+            : urgency === "later" ? "ring-1 ring-inset ring-success/50 bg-success/5"
+            : "";
+          const dotClass =
+            urgency === "overdue" ? "bg-destructive"
+            : urgency === "soon"  ? "bg-warn"
+            : urgency === "later" ? "bg-success"
+            : "";
           return (
-            <div key={i} className={`min-h-[90px] bg-card p-1.5 ${cell.date ? "" : "opacity-30"}`}>
+            <div key={i} className={`relative min-h-[90px] bg-card p-1.5 ${cell.date ? "" : "opacity-30"} ${urgencyClass}`}>
               {cell.date && (
                 <>
-                  <p className={`font-mono text-[11px] tabular-nums ${isToday ? "text-accent" : "text-muted-foreground"}`}>{cell.date.getDate()}</p>
+                  <div className="flex items-center justify-between">
+                    <p className={`font-mono text-[11px] tabular-nums ${isToday ? "text-accent" : "text-muted-foreground"}`}>{cell.date.getDate()}</p>
+                    {urgency && <span className={`h-1.5 w-1.5 rounded-full ${dotClass} ${urgency === "overdue" ? "animate-pulse" : ""}`} />}
+                  </div>
                   <ul className="mt-1 space-y-0.5">
                     {list.slice(0, 3).map(tk => {
                       const m = missions.find(mm => mm.id === tk.mission_id);
