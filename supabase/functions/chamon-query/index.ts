@@ -17,6 +17,8 @@ import { handleWhatNeedsAttention } from "./handlers/what_needs_attention.ts";
 import { handleOverdue } from "./handlers/overdue.ts";
 import { handleSearch } from "./handlers/search.ts";
 import { handleXpStatus } from "./handlers/xp_status.ts";
+import { handleTodaySummary } from "./handlers/today_summary.ts";
+import { handleListUnread } from "./handlers/list_unread.ts";
 
 function bad(message: string, reason: string) {
   return json({ ok: false, error: MSG.badRequest, reason, message }, 400);
@@ -49,7 +51,7 @@ Deno.serve(async (req) => {
   const params = (parsed.params ?? {}) as Record<string, unknown>;
   if (!queryType) {
     return bad(
-      "Falta el campo top-level query_type. Valores válidos: today_focus, missions_overview, mission_details, what_needs_attention, overdue, search, xp_status.",
+      "Falta el campo top-level query_type. Valores válidos: today_focus, missions_overview, mission_details, what_needs_attention, overdue, search, xp_status, today_summary, list_unread.",
       "missing_query_type",
     );
   }
@@ -99,6 +101,26 @@ Deno.serve(async (req) => {
       case "xp_status":
         result = await handleXpStatus(supabase, userId);
         break;
+      case "today_summary": {
+        let limit: number | undefined;
+        if (params.limit !== undefined && params.limit !== null) {
+          const n = coerceNumber(params.limit);
+          if (n === null) return bad("El parámetro params.limit debe ser un número.", "bad_limit");
+          limit = n;
+        }
+        result = await handleTodaySummary({ limit });
+        break;
+      }
+      case "list_unread": {
+        let limit: number | undefined;
+        if (params.limit !== undefined && params.limit !== null) {
+          const n = coerceNumber(params.limit);
+          if (n === null) return bad("El parámetro params.limit debe ser un número.", "bad_limit");
+          limit = n;
+        }
+        result = await handleListUnread({ limit });
+        break;
+      }
       case "search": {
         const query = typeof params.query === "string" ? params.query.trim() : "";
         if (!query) {
