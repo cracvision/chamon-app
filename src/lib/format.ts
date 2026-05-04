@@ -17,6 +17,15 @@ export function daysFromToday(iso: string | null | undefined): number | null {
   return Math.round((d.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 }
 
+export function isToday(iso: string | null | undefined): boolean {
+  return daysFromToday(iso) === 0;
+}
+
+export function isTaskInTodayFocus(task: { is_today: boolean; status: string; due_date: string | null }): boolean {
+  if (task.status === "done") return false;
+  return task.is_today || isToday(task.due_date);
+}
+
 export function dueLabel(iso: string | null | undefined, t: (k: any, v?: any) => string): string {
   const n = daysFromToday(iso);
   if (n === null) return t("due.none");
