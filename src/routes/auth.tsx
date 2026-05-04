@@ -86,6 +86,7 @@ function AuthPage() {
             <Input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={8} autoComplete={mode === "signup" ? "new-password" : "current-password"} className="h-10 bg-card-elevated" />
           </div>
           <Button type="submit" disabled={busy} className="mt-1 h-11 bg-accent text-accent-foreground hover:bg-accent/90">
+            {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {mode === "signin" ? t("auth.signin") : t("auth.signup")}
           </Button>
         </form>
