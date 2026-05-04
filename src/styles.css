@@ -190,6 +190,21 @@
   100% { box-shadow: 0 0 0 0 color-mix(in oklch, currentColor 0%, transparent); }
 }
 
+/* Restore pointer cursor on interactive elements (Tailwind v4 no longer does this by default) */
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled),
+  a[href],
+  summary,
+  label[for],
+  select:not(:disabled),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled) {
+    cursor: pointer;
+  }
+}
+
 /* Lift ElevenLabs floating widget above mobile bottom nav */
 @media (max-width: 1023px) {
   elevenlabs-convai {
