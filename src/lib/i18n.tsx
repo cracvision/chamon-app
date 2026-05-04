@@ -310,13 +310,24 @@ interface I18nContextValue {
 const I18nContext = createContext<I18nContextValue | null>(null);
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>(() => {
-    if (typeof window === "undefined") return "es";
-    return (localStorage.getItem("mc.lang") as Lang) || "es";
-  });
+  // Always start with "es" so SSR and the first client render match.
+  // Hydrate from localStorage after mount to avoid hydration mismatches
+  // (mismatches force React to discard the SSR tree and delay interactivity).
+  const [lang, setLangState] = useState<Lang>("es");
+  const [hydrated, setHydrated] = useState(false);
+
   useEffect(() => {
-    if (typeof window !== "undefined") localStorage.setItem("mc.lang", lang);
-  }, [lang]);
+    const stored = localStorage.getItem("mc.lang") as Lang | null;
+    if (stored === "en" || stored === "es") setLangState(stored);
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (hydrated && typeof window !== "undefined") {
+      localStorage.setItem("mc.lang", lang);
+    }
+  }, [lang, hydrated]);
+
   const setLang = (l: Lang) => setLangState(l);
   const t = (key: DictKey, vars?: Record<string, string | number>) => {
     let s: string = dict[lang][key] ?? dict.es[key] ?? key;
