@@ -108,7 +108,9 @@ Deno.serve(async (req) => {
           if (n === null) return bad("El parámetro params.limit debe ser un número.", "bad_limit");
           limit = n;
         }
-        result = await handleTodaySummary({ limit });
+        const account = typeof params.account === "string" && params.account.trim().length > 0
+          ? params.account.trim() : undefined;
+        result = await handleTodaySummary({ limit, account });
         break;
       }
       case "list_unread": {
@@ -118,7 +120,9 @@ Deno.serve(async (req) => {
           if (n === null) return bad("El parámetro params.limit debe ser un número.", "bad_limit");
           limit = n;
         }
-        result = await handleListUnread({ limit });
+        const account = typeof params.account === "string" && params.account.trim().length > 0
+          ? params.account.trim() : undefined;
+        result = await handleListUnread({ limit, account });
         break;
       }
       case "search": {

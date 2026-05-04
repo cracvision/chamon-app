@@ -90,17 +90,34 @@ User identity is **not** carried in the request. The function pulls `CHAMON_USER
 | `what_needs_attention` | — | Active missions flagged as crit / overdue / due≤3d / COI>50, with reasons |
 | `overdue` | — | Tasks with `due_date < today (PR)` and `status != 'done'` |
 | `search` | `{ query, limit? }` (limit ≤20, default 10) | Trigram search across missions + tasks via `chamon_search` RPC |
-| `today_summary` | `{ limit? }` (≤20, default 10) | Gmail Primary inbox messages received today (PR), with unread count |
-| `list_unread` | `{ limit? }` (≤20, default 10) | Most recent unread messages in Gmail Primary inbox |
+| `today_summary` | `{ limit?, account? }` (≤20, default 10) | Gmail Primary inbox messages received today (PR) across **all linked accounts**, with unread count |
+| `list_unread` | `{ limit?, account? }` (≤20, default 10) | Most recent unread messages in Gmail Primary inbox across **all linked accounts** |
 
 All times are `America/Puerto_Rico` (UTC-4, no DST).
 
-### Gmail integration
+### Gmail integration (multi-account)
 
 `today_summary` and `list_unread` read via the Lovable Gmail connector (scope
 `gmail.readonly`). Both filter to the **Primary** category, excluding
 Promotions / Social / Updates / Forums. Read-only — no send/modify in this
 sprint.
+
+**Multi-account fan-out:** the function scans env for `GOOGLE_MAIL_API_KEY`,
+`GOOGLE_MAIL_API_KEY_1`, `GOOGLE_MAIL_API_KEY_2`, ... Each variable corresponds
+to one linked Gmail connection. All accounts are queried in parallel and
+results are merged + sorted by `received_at` desc, then truncated to `limit`.
+
+Each item carries an `account` field (the resolved email address). The
+response also includes:
+- `accounts_checked: string[]` — which accounts contributed
+- `errors: [{ account, message }]` — per-account failures (one bad token does
+  not kill the response)
+
+**Filtering:** pass `params.account` with a substring (case-insensitive) to
+restrict to one account, e.g. `{"account":"craczone"}` matches
+`craczone@gmail.com`.
+
+
 
 ## Response shape
 
