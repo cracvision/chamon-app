@@ -1,76 +1,88 @@
-Tienes razón. Lo estaba interpretando como “focus manual” por el flag `is_today`, pero según el uso real que describes, ese card debe ser un radar operativo del día: si una tarea vence hoy, debe aparecer ahí automáticamente aunque el icono del sol esté gris.
+# Plan: Lectura de Gmail para Chamón
 
-## Bug confirmado
+Confirmado el alcance:
+- **Solo lectura** (scope `gmail.readonly`).
+- Filtrar siempre por **Primary inbox** (excluyendo Promotions / Social / Updates / Forums).
+- No se implementa send / modify / drafts en esta iteración.
 
-Actualmente hay dos conceptos separados:
+## Arquitectura
 
-1. `due_date === hoy` → la UI muestra la etiqueta “HOY”.
-2. `is_today === true` → el Dashboard la muestra en “HOY · FOCUS”.
+Toda la lectura de Gmail va por el **conector Gmail de Lovable** (gateway), no con OAuth manual. El gateway hace refresh automático del token. El conector queda autorizado con **tu cuenta de Gmail** (eres el único usuario de Chamón hoy), por lo que esto encaja con el modelo single-user de Sprint 1.
 
-Eso causa exactamente el bug que señalas: una tarea que vence hoy puede estar visible como “HOY” en el detalle, pero no aparecer en el card más importante para evitar penalidades.
+## Pasos
 
-## Corrección propuesta
+### 1. Conectar Gmail al proyecto
 
-### 1. Crear una regla única para “tareas del día”
+Llamaré al tool `standard_connectors--connect` con `connector_id=google_mail`. Te aparecerá un picker para autorizar tu cuenta y seleccionar el scope. **Importante**: en el diálogo solo necesitas marcar `gmail.readonly` (no marques send / modify).
 
-Voy a tratar como tarea de hoy cualquier tarea abierta que cumpla al menos una de estas condiciones:
+Tras autorizar, el gateway expone `GOOGLE_MAIL_API_KEY` y `LOVABLE_API_KEY` como env vars en el runtime de las edge functions.
 
-```ts
-status !== "done" && (
-  is_today === true ||
-  due_date === today
-)
+### 2. Crear cliente Gmail compartido
+
+Nuevo archivo: `supabase/functions/_shared/gmail.ts`
+
+Helper que abstrae el gateway:
+- `listPrimaryMessages({ unreadOnly?, maxResults? })` — usa `q=category:primary` (y opcionalmente `is:unread`) para filtrar Primary y excluir Promotions/Social/Updates/Forums.
+- `getMessageMetadata(id)` — pide `format=metadata` con headers `From`, `Subject`, `Date`, y devuelve `snippet` + `unread` (basado en label `UNREAD`).
+
+Manejo de errores:
+- 401 → mensaje claro de "necesita reconexión".
+- 403 `insufficient authentication scopes` → no debería pasar con readonly, pero se loguea.
+- Variables faltantes → error 500 con mensaje específico (mismo patrón que el resto del código).
+
+### 3. Dos nuevos handlers en chamon-query
+
+**`handlers/today_summary.ts`** → query_type `today_summary`
+- Lista los últimos N (default 10, max 20) mensajes de Primary del día de hoy en zona PR.
+- Devuelve: `{ count, items: [{ id, from, subject, snippet, received_at, unread }] }`.
+- Útil para que Chamón diga: "Hoy te llegaron 4 emails en Primary, 2 sin leer..."
+
+**`handlers/list_unread.ts`** → query_type `list_unread`
+- Lista los últimos N (default 10, max 20) mensajes **no leídos** de Primary (sin restricción de fecha).
+- Misma forma de respuesta que `today_summary`.
+
+Ambos handlers hacen 1 llamada `messages.list` + N llamadas `messages.get` en paralelo (con `Promise.all`).
+
+### 4. Registrar los nuevos query_types
+
+En `supabase/functions/chamon-query/index.ts`:
+- Agregar `today_summary` y `list_unread` al switch del router.
+- Aceptar `params.limit` opcional (validado con `coerceNumber`, igual que en `what_needs_attention` / `search`).
+- Actualizar el mensaje de error `missing_query_type` para incluir los dos nuevos valores.
+
+### 5. Actualizar README
+
+En `supabase/functions/chamon-query/README.md`:
+- Agregar las dos nuevas filas a la tabla de query types.
+- Nota corta sobre el scope `gmail.readonly` y el filtro Primary.
+
+### 6. Configurar el agente de ElevenLabs
+
+Después de desplegar:
+- En la herramienta del agente, agregar las dos nuevas operaciones (`today_summary`, `list_unread`) con sus descripciones para que sepa cuándo invocarlas.
+
+## Archivos afectados
+
+```text
+supabase/functions/_shared/gmail.ts              [nuevo]
+supabase/functions/chamon-query/handlers/today_summary.ts   [nuevo]
+supabase/functions/chamon-query/handlers/list_unread.ts     [nuevo]
+supabase/functions/chamon-query/index.ts                    [editar: router]
+supabase/functions/chamon-query/README.md                   [editar: docs]
 ```
 
-Es decir:
+## Validación
 
-- Si está marcada con el sol, aparece en Focus.
-- Si vence hoy, aparece en Focus aunque el sol esté gris.
-- Si está completada, no aparece.
+1. Deploy de `chamon-query`.
+2. Llamada manual con `sign-request.ts today_summary` → ver últimos emails de Primary de hoy.
+3. Llamada con `sign-request.ts list_unread '{"limit":5}'` → ver 5 no leídos.
+4. Probar desde el agente de ElevenLabs: "¿Qué emails tengo hoy?" / "¿Tengo correos sin leer?"
 
-### 2. Usar esa misma regla en el Dashboard
+## Lo que NO incluye este plan
 
-Archivo: `src/routes/_authenticated.dashboard.tsx`
+- Enviar emails (requeriría `gmail.send` y un `chamon-send-email` separado).
+- Marcar como leído / archivar (requeriría `gmail.modify`).
+- Buscar emails por contenido o remitente (lo dejamos para una iteración futura como `search_email`).
+- Almacenar emails en la base de datos — todo se lee on-demand.
 
-Cambiaré el filtro actual:
-
-```ts
-const todayTasks = tasks.filter(tk => tk.is_today && tk.status !== "done");
-```
-
-por una regla que también incluya `due_date` de hoy.
-
-### 3. Usar la misma regla en la página Hoy
-
-Archivo: `src/routes/_authenticated.today.tsx`
-
-Actualmente esa página también depende solo de `is_today`. La voy a alinear para que no haya inconsistencia entre Dashboard y Hoy.
-
-### 4. Evitar errores de fecha por zona horaria
-
-No voy a usar `new Date().toISOString().slice(0, 10)` directamente porque puede fallar por zona horaria. Crearé/usaré una función consistente para comparar fechas locales y que `2026-05-04` sea tratado correctamente como hoy en la experiencia del usuario.
-
-### 5. Ajustar el comportamiento del botón del sol en el Focus card
-
-Como ahora habrá tareas que aparecen por vencer hoy aunque no estén marcadas manualmente con `is_today`, el botón del sol no debe dar la falsa impresión de que puedes “quitar” una tarea venciendo hoy del radar del día.
-
-La intención será:
-
-- Tarea marcada manualmente con sol: el botón permite desmarcarla.
-- Tarea que aparece porque vence hoy: sigue apareciendo aunque el sol esté gris, porque es obligatoria para el día.
-
-Si hace falta, ajustaré el tooltip para que sea claro.
-
-## Resultado esperado
-
-Con la data actual, la tarea:
-
-“Llamar al tecnico de reparaciones y coordinar cita”
-
-aparecerá inmediatamente en el card “HOY · FOCUS” porque:
-
-- vence el 05/04/2026,
-- hoy es 05/04/2026,
-- y no está completada.
-
-No requiere cambiar datos en la base de datos; es una corrección de lógica en la UI.
+Si confirmas, procedo en modo build con la conexión y la implementación.
