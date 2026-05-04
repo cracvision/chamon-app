@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMissions, useTasks, useAreas, useUpdateTask } from "@/lib/queries";
 import { useI18n } from "@/lib/i18n";
-import { dueLabel, daysFromToday } from "@/lib/format";
+import { dueLabel, daysFromToday, isTaskInTodayFocus } from "@/lib/format";
 import { Sun, ArrowLeft, Target } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/today")({
@@ -14,7 +14,7 @@ function TodayPage() {
   const { data: missions = [] } = useMissions();
   const update = useUpdateTask();
 
-  const todayTasks = tasks.filter(tk => tk.is_today && tk.status !== "done");
+  const todayTasks = tasks.filter(isTaskInTodayFocus);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 lg:px-6">

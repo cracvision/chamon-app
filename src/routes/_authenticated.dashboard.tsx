@@ -5,7 +5,7 @@ import { MissionCard } from "@/components/MissionCard";
 import { FocusTaskCard } from "@/components/FocusTaskCard";
 import { MissionDetail, MissionDangerZone } from "@/components/MissionDetail";
 import { useI18n } from "@/lib/i18n";
-import { dueLabel, daysFromToday } from "@/lib/format";
+import { dueLabel, daysFromToday, isTaskInTodayFocus } from "@/lib/format";
 import { Target, ListTodo, Flame, Trophy, Sun } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -26,7 +26,7 @@ function Dashboard() {
     if (!selectedId && activeMissions.length) setSelectedId(activeMissions[0].id);
   }, [activeMissions, selectedId]);
 
-  const todayTasks = tasks.filter(tk => tk.is_today && tk.status !== "done");
+  const todayTasks = tasks.filter(isTaskInTodayFocus);
   const openCount = tasks.filter(tk => tk.status !== "done").length;
 
   const upcoming = useMemo(() => {

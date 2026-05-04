@@ -44,9 +44,10 @@ export function FocusTaskCard({ task, mission }: Props) {
           <FrictionBars n={task.friction_level} />
         </div>
       </div>
-      <button onClick={() => update.mutate({ id: task.id, patch: { is_today: false } })}
-        title={t("task.unmarkToday")}
-        className="rounded p-1 text-muted-foreground hover:bg-card hover:text-foreground">
+      <button
+        onClick={() => update.mutate({ id: task.id, patch: { is_today: !task.is_today } })}
+        title={task.is_today ? t("task.unmarkToday") : t("task.markToday")}
+        className={`rounded p-1 hover:bg-card ${task.is_today ? "text-accent" : "text-muted-foreground hover:text-foreground"}`}>
         <Sun className="h-4 w-4" />
       </button>
       {mission && (

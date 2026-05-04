@@ -1,63 +1,76 @@
-## Objetivo
-Permitir que Chamón (voz) pueda ver y comentar tu progreso de XP, nivel, racha y trofeos — reusando el tool existente `query_mission_control` en ElevenLabs, sin crear uno nuevo.
+Tienes razón. Lo estaba interpretando como “focus manual” por el flag `is_today`, pero según el uso real que describes, ese card debe ser un radar operativo del día: si una tarea vence hoy, debe aparecer ahí automáticamente aunque el icono del sol esté gris.
 
-## Por qué reusar el mismo tool
-El tool ya está montado, autenticado (HMAC + bearer) y apuntando a `chamon-query`. Esa función ya hace switch por `query_type`. Solo hay que:
-1. Añadir un nuevo valor al enum (`xp_status`).
-2. Crear el handler en el backend.
-3. Actualizar las descripciones del tool en ElevenLabs para que el agente sepa cuándo usarlo.
+## Bug confirmado
 
-No hay que tocar URL, auth, headers, ni crear properties nuevos — los actuales (`query_type`, `params`, `query`, `mission_id`, `mission_title`, `limit`) cubren todo.
+Actualmente hay dos conceptos separados:
 
-## Cambios en el backend (`chamon-query`)
+1. `due_date === hoy` → la UI muestra la etiqueta “HOY”.
+2. `is_today === true` → el Dashboard la muestra en “HOY · FOCUS”.
 
-### 1. Nuevo handler: `handlers/xp_status.ts`
-Lee de `user_stats`, `achievements`, `user_achievements` y `xp_events` para devolver:
+Eso causa exactamente el bug que señalas: una tarea que vence hoy puede estar visible como “HOY” en el detalle, pero no aparecer en el card más importante para evitar penalidades.
 
-```text
-{
-  level: { number, name, xp_total, xp_to_next, progress_pct },
-  streak: { current_days, longest_days },
-  totals: { tasks_completed, missions_completed },
-  trophies: {
-    unlocked_count,
-    total_count,
-    recent_unlocked: [ { name, icon, unlocked_at } ],   // últimos 3
-    closest_to_unlock: [ { name, icon, progress, target, pct } ]  // top 3 en progreso
-  },
-  xp_recent: { today, last_7_days }
-}
+## Corrección propuesta
+
+### 1. Crear una regla única para “tareas del día”
+
+Voy a tratar como tarea de hoy cualquier tarea abierta que cumpla al menos una de estas condiciones:
+
+```ts
+status !== "done" && (
+  is_today === true ||
+  due_date === today
+)
 ```
 
-Los textos van en español (igual que los otros handlers, usando `format.ts`).
+Es decir:
 
-### 2. Registrar el caso en `index.ts`
-Añadir `case "xp_status"` al switch — no necesita params, igual que `today_focus` y `overdue`.
+- Si está marcada con el sol, aparece en Focus.
+- Si vence hoy, aparece en Focus aunque el sol esté gris.
+- Si está completada, no aparece.
 
-## Cambios en ElevenLabs (manual, te paso los textos)
+### 2. Usar esa misma regla en el Dashboard
 
-### A. Editar el property `query_type`
-Añadir `xp_status` a la lista de Enum Values (ahora son 6, pasarían a 7).
+Archivo: `src/routes/_authenticated.dashboard.tsx`
 
-Y actualizar su Description para mencionar el nuevo caso. Te dejaré el texto exacto a pegar.
+Cambiaré el filtro actual:
 
-### B. Actualizar la Description principal del tool
-Mencionar que también responde sobre nivel, XP, racha y trofeos.
+```ts
+const todayTasks = tasks.filter(tk => tk.is_today && tk.status !== "done");
+```
 
-### C. Actualizar la Description del body
-Indicar que `xp_status` no requiere `params`.
+por una regla que también incluya `due_date` de hoy.
 
-### D. (Opcional) Tweak al system prompt del agente
-Añadir una línea: "Si Carlos pregunta sobre su progreso, nivel, XP, racha o trofeos, usa `query_mission_control` con `query_type=xp_status`."
+### 3. Usar la misma regla en la página Hoy
 
-## Lo que NO cambia
-- URL del endpoint
-- Autenticación (HMAC + bearer)
-- Properties existentes (`params`, `query`, `mission_id`, `mission_title`, `limit`)
-- Los otros 6 handlers
-- Frontend (la página `/achievements` ya existe y funciona)
+Archivo: `src/routes/_authenticated.today.tsx`
 
-## Después de aprobar
-Implemento el handler + el case del switch, pruebo el edge function localmente con `test_edge_functions`, y te entrego los textos exactos para pegar en los 3 lugares de ElevenLabs.
+Actualmente esa página también depende solo de `is_today`. La voy a alinear para que no haya inconsistencia entre Dashboard y Hoy.
 
-¿Le doy?
+### 4. Evitar errores de fecha por zona horaria
+
+No voy a usar `new Date().toISOString().slice(0, 10)` directamente porque puede fallar por zona horaria. Crearé/usaré una función consistente para comparar fechas locales y que `2026-05-04` sea tratado correctamente como hoy en la experiencia del usuario.
+
+### 5. Ajustar el comportamiento del botón del sol en el Focus card
+
+Como ahora habrá tareas que aparecen por vencer hoy aunque no estén marcadas manualmente con `is_today`, el botón del sol no debe dar la falsa impresión de que puedes “quitar” una tarea venciendo hoy del radar del día.
+
+La intención será:
+
+- Tarea marcada manualmente con sol: el botón permite desmarcarla.
+- Tarea que aparece porque vence hoy: sigue apareciendo aunque el sol esté gris, porque es obligatoria para el día.
+
+Si hace falta, ajustaré el tooltip para que sea claro.
+
+## Resultado esperado
+
+Con la data actual, la tarea:
+
+“Llamar al tecnico de reparaciones y coordinar cita”
+
+aparecerá inmediatamente en el card “HOY · FOCUS” porque:
+
+- vence el 05/04/2026,
+- hoy es 05/04/2026,
+- y no está completada.
+
+No requiere cambiar datos en la base de datos; es una corrección de lógica en la UI.
