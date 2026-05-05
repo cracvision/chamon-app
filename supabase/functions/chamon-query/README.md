@@ -92,7 +92,7 @@ User identity is **not** carried in the request. The function pulls `CHAMON_USER
 | `search` | `{ query, limit? }` (limit ≤20, default 10) | Trigram search across missions + tasks via `chamon_search` RPC |
 | `today_summary` | `{ limit?, account? }` (≤20, default 10) | Gmail Primary inbox messages received today (PR) across **all linked accounts**, with unread count |
 | `list_unread` | `{ limit?, account? }` (≤20, default 10) | Most recent unread messages in Gmail Primary inbox across **all linked accounts** |
-| `email_detail` | `{ message_id, account? }` | **Opt-in.** Full body of a single Gmail message (text/plain preferred, HTML stripped). Truncated at 8000 chars. Chamón must only call this when Carlos explicitly asks for the detail. |
+| `email_detail` | `{ message_id, account? }` — also accepts `message_id`/`account` at body top-level as a fallback for clients that flatten the wrapper | **Opt-in.** Full body of a single Gmail message (text/plain preferred, HTML stripped). Truncated at 8000 chars. Chamón must only call this when Carlos explicitly asks for the detail. |
 
 All times are `America/Puerto_Rico` (UTC-4, no DST).
 
