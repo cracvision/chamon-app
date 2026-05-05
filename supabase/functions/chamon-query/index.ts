@@ -19,6 +19,7 @@ import { handleSearch } from "./handlers/search.ts";
 import { handleXpStatus } from "./handlers/xp_status.ts";
 import { handleTodaySummary } from "./handlers/today_summary.ts";
 import { handleListUnread } from "./handlers/list_unread.ts";
+import { handleEmailDetail } from "./handlers/email_detail.ts";
 
 function bad(message: string, reason: string) {
   return json({ ok: false, error: MSG.badRequest, reason, message }, 400);
@@ -51,7 +52,7 @@ Deno.serve(async (req) => {
   const params = (parsed.params ?? {}) as Record<string, unknown>;
   if (!queryType) {
     return bad(
-      "Falta el campo top-level query_type. Valores válidos: today_focus, missions_overview, mission_details, what_needs_attention, overdue, search, xp_status, today_summary, list_unread.",
+      "Falta el campo top-level query_type. Valores válidos: today_focus, missions_overview, mission_details, what_needs_attention, overdue, search, xp_status, today_summary, list_unread, email_detail.",
       "missing_query_type",
     );
   }
@@ -123,6 +124,19 @@ Deno.serve(async (req) => {
         const account = typeof params.account === "string" && params.account.trim().length > 0
           ? params.account.trim() : undefined;
         result = await handleListUnread({ limit, account });
+        break;
+      }
+      case "email_detail": {
+        const messageId = typeof params.message_id === "string" ? params.message_id.trim() : "";
+        if (messageId.length < 5) {
+          return bad(
+            "Falta o es inválido params.message_id para query_type=email_detail.",
+            "missing_message_id",
+          );
+        }
+        const account = typeof params.account === "string" && params.account.trim().length > 0
+          ? params.account.trim() : undefined;
+        result = await handleEmailDetail({ message_id: messageId, account });
         break;
       }
       case "search": {

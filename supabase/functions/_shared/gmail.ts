@@ -255,3 +255,169 @@ export async function listPrimaryMessages(opts: ListOpts): Promise<GmailMessageS
   const result = await listPrimaryMessagesAllAccounts(opts);
   return result.items;
 }
+
+// ─── Full-message detail (opt-in) ───
+
+const BODY_LIMIT = 8000;
+
+interface MimePart {
+  mimeType?: string;
+  filename?: string;
+  body?: { data?: string; size?: number };
+  parts?: MimePart[];
+}
+
+interface FullMessageResponse {
+  id: string;
+  threadId: string;
+  internalDate?: string;
+  labelIds?: string[];
+  payload?: MimePart & { headers?: Array<{ name: string; value: string }> };
+}
+
+function decodeBase64Url(data: string): string {
+  const norm = data.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = norm + "=".repeat((4 - (norm.length % 4)) % 4);
+  try {
+    const bytes = Uint8Array.from(atob(padded), (c) => c.charCodeAt(0));
+    return new TextDecoder("utf-8").decode(bytes);
+  } catch {
+    return "";
+  }
+}
+
+function stripHtml(html: string): string {
+  return html
+    .replace(/<style[\s\S]*?<\/style>/gi, "")
+    .replace(/<script[\s\S]*?<\/script>/gi, "")
+    .replace(/<\/(p|div|br|li|tr|h[1-6])>/gi, "\n")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, "\n\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .trim();
+}
+
+function findPart(part: MimePart | undefined, mime: string): MimePart | null {
+  if (!part) return null;
+  if (part.mimeType === mime && part.body?.data) return part;
+  if (part.parts) {
+    for (const p of part.parts) {
+      const found = findPart(p, mime);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+function extractBody(payload: MimePart | undefined): string {
+  if (!payload) return "";
+  // Prefer text/plain
+  const plain = findPart(payload, "text/plain");
+  if (plain?.body?.data) return decodeBase64Url(plain.body.data);
+  const html = findPart(payload, "text/html");
+  if (html?.body?.data) return stripHtml(decodeBase64Url(html.body.data));
+  // Fallback: top-level body
+  if (payload.body?.data) {
+    const raw = decodeBase64Url(payload.body.data);
+    return payload.mimeType === "text/html" ? stripHtml(raw) : raw;
+  }
+  return "";
+}
+
+export interface FullMessage {
+  id: string;
+  account: string;
+  from: string;
+  to: string;
+  subject: string;
+  received_at: string;
+  body_text: string;
+  truncated: boolean;
+}
+
+async function getMessageFullForAccount(
+  envName: string,
+  account: string,
+  messageId: string,
+): Promise<FullMessage> {
+  const msg = await gmailGet(envName, `/users/me/messages/${messageId}?format=full`) as FullMessageResponse;
+  const headers = msg.payload?.headers ?? [];
+  const h = (name: string) =>
+    headers.find((x) => x.name.toLowerCase() === name.toLowerCase())?.value ?? "";
+  const internal = msg.internalDate ? Number(msg.internalDate) : NaN;
+  const receivedAt = Number.isFinite(internal)
+    ? new Date(internal).toISOString()
+    : (h("Date") || new Date(0).toISOString());
+  let body = extractBody(msg.payload);
+  const truncated = body.length > BODY_LIMIT;
+  if (truncated) body = body.slice(0, BODY_LIMIT) + "\n…[truncado]";
+  return {
+    id: msg.id,
+    account,
+    from: h("From"),
+    to: h("To"),
+    subject: h("Subject") || "(sin asunto)",
+    received_at: receivedAt,
+    body_text: body,
+    truncated,
+  };
+}
+
+/**
+ * Fetches the full body of a single message across all linked Gmail accounts.
+ * Tries each candidate account in parallel; first success wins.
+ * Throws if no account has the message.
+ */
+export async function getMessageFullAcrossAccounts(
+  messageId: string,
+  accountFilter?: string,
+): Promise<FullMessage> {
+  const allKeys = listGmailAccountKeys();
+  if (allKeys.length === 0) {
+    throw new Error("No hay cuentas Gmail conectadas.");
+  }
+
+  // Resolve emails so we can filter and label.
+  const resolved = await Promise.all(
+    allKeys.map(async (envName) => {
+      try {
+        const email = await resolveAccountEmail(envName);
+        return { envName, email };
+      } catch {
+        return { envName, email: null as string | null };
+      }
+    }),
+  );
+
+  const filter = accountFilter?.trim().toLowerCase();
+  const targets = resolved.filter((r) =>
+    r.email && (!filter || r.email.toLowerCase().includes(filter))
+  );
+
+  if (targets.length === 0) {
+    throw new Error(
+      filter
+        ? `Ninguna cuenta conectada coincide con "${accountFilter}".`
+        : "No pude resolver ninguna cuenta Gmail conectada.",
+    );
+  }
+
+  const attempts = await Promise.allSettled(
+    targets.map((t) => getMessageFullForAccount(t.envName, t.email!, messageId)),
+  );
+  for (const a of attempts) {
+    if (a.status === "fulfilled") return a.value;
+  }
+  throw new Error(
+    `No encontré ese correo en ninguna cuenta conectada (${
+      targets.map((t) => t.email).join(", ")
+    }).`,
+  );
+}
