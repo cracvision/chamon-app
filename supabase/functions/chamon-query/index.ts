@@ -19,6 +19,7 @@ import { handleSearch } from "./handlers/search.ts";
 import { handleXpStatus } from "./handlers/xp_status.ts";
 import { handleTodaySummary } from "./handlers/today_summary.ts";
 import { handleListUnread } from "./handlers/list_unread.ts";
+import { handleEmailDetail } from "./handlers/email_detail.ts";
 
 function bad(message: string, reason: string) {
   return json({ ok: false, error: MSG.badRequest, reason, message }, 400);
