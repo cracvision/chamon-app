@@ -126,6 +126,19 @@ Deno.serve(async (req) => {
         result = await handleListUnread({ limit, account });
         break;
       }
+      case "email_detail": {
+        const messageId = typeof params.message_id === "string" ? params.message_id.trim() : "";
+        if (messageId.length < 5) {
+          return bad(
+            "Falta o es inválido params.message_id para query_type=email_detail.",
+            "missing_message_id",
+          );
+        }
+        const account = typeof params.account === "string" && params.account.trim().length > 0
+          ? params.account.trim() : undefined;
+        result = await handleEmailDetail({ message_id: messageId, account });
+        break;
+      }
       case "search": {
         const query = typeof params.query === "string" ? params.query.trim() : "";
         if (!query) {
