@@ -127,15 +127,23 @@ Deno.serve(async (req) => {
         break;
       }
       case "email_detail": {
-        const messageId = typeof params.message_id === "string" ? params.message_id.trim() : "";
+        // Tolerate message_id at top-level OR inside params (ElevenLabs LLM
+        // sometimes flattens the wrapper for new tools).
+        const topLevelId = typeof (parsed as Record<string, unknown>).message_id === "string"
+          ? ((parsed as Record<string, unknown>).message_id as string) : "";
+        const paramsId = typeof params.message_id === "string" ? params.message_id : "";
+        const messageId = (paramsId || topLevelId).trim();
         if (messageId.length < 5) {
           return bad(
-            "Falta o es inválido params.message_id para query_type=email_detail.",
+            "Falta o es inválido params.message_id para query_type=email_detail. Acepta también message_id en el top-level del body.",
             "missing_message_id",
           );
         }
-        const account = typeof params.account === "string" && params.account.trim().length > 0
-          ? params.account.trim() : undefined;
+        const topLevelAccount = typeof (parsed as Record<string, unknown>).account === "string"
+          ? ((parsed as Record<string, unknown>).account as string) : "";
+        const paramsAccount = typeof params.account === "string" ? params.account : "";
+        const accountRaw = (paramsAccount || topLevelAccount).trim();
+        const account = accountRaw.length > 0 ? accountRaw : undefined;
         result = await handleEmailDetail({ message_id: messageId, account });
         break;
       }
