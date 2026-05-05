@@ -1,143 +1,57 @@
 ## Objetivo
 
-Que Chamón pueda leer correos de **múltiples cuentas a la vez**, mezclando providers:
-- 3 cuentas Gmail (las que ya tienes + las 2 nuevas)
-- 1 cuenta Microsoft 365 (`cracevedoc@berylliumpr.net`)
+Agregar `email_detail` como nuevo `query_type` en `chamon-query` para que Chamón pueda traer el cuerpo completo de un correo específico **solo cuando Carlos lo pida explícitamente**. Por defecto, `today_summary` y `list_unread` siguen igual (metadata + snippet corto).
 
-Todo unificado bajo los mismos query_types (`today_summary`, `list_unread`), con resultados ordenados por fecha y etiquetados por cuenta de origen.
+## Cambios
 
-## Arquitectura
+### 1. `supabase/functions/_shared/gmail.ts`
+Agregar `getMessageFullAcrossAccounts(messageId, accountFilter?)`:
+- Itera las cuentas Gmail conectadas (usa el mismo scan de env vars que ya existe).
+- Llama `GET /users/me/messages/{id}?format=full` en cada una hasta encontrar match (Gmail devuelve 404 si el id no pertenece a esa cuenta).
+- Si `accountFilter` viene, restringe la búsqueda a cuentas cuyo email haga match parcial.
+- Decodifica el cuerpo MIME: prefiere `text/plain`; si solo hay `text/html`, hace strip básico de tags. Base64url → UTF-8.
+- Trunca el body a ~8000 caracteres y marca `truncated: true` si aplica.
+- Devuelve `{ id, account, from, to, subject, received_at, body_text, truncated }` o lanza si ninguna cuenta lo tiene.
 
-```text
-chamon-query/
-  handlers/
-    today_summary.ts   ── llama a mailbox.ts (no a gmail.ts directo)
-    list_unread.ts     ──┘
-_shared/
-  mailbox.ts           [nuevo] Orquestador multi-provider, multi-cuenta
-  gmail.ts             [refactor] Acepta accountKey, expone listAccounts()
-  outlook.ts           [nuevo] Cliente Outlook por gateway, mismo shape
-```
+### 2. Nuevo handler `supabase/functions/chamon-query/handlers/email_detail.ts`
+- Input: `{ message_id: string, account?: string }`.
+- Llama a `getMessageFullAcrossAccounts`.
+- Devuelve el objeto + un `message` corto tipo `"Correo de <from> recibido <fecha>. Asunto: <subject>."` para anclar al LLM antes del cuerpo.
 
-El orquestador `mailbox.ts` hace fan-out en paralelo a todas las cuentas conectadas (Gmail + Outlook), normaliza la respuesta a un shape único `MessageSummary`, y mergea por `received_at` desc.
+### 3. `supabase/functions/chamon-query/index.ts`
+- Agregar `case "email_detail"`: validar `params.message_id` (string requerido, mín. 5 chars) y `params.account` (string opcional).
+- Agregar `email_detail` a la lista de query_types válidos en el mensaje de error.
 
-## Pasos
+### 4. System prompt de Chamón (ElevenLabs)
+- Agregar `email_detail` al enum de `query_type` en la tool definition.
+- Documentar `params.message_id` y `params.account` (opcional).
+- Agregar sección en el system prompt:
+  > **Detalle de correo (opt-in).** Nunca traigas el cuerpo completo por tu cuenta. `today_summary` y `list_unread` ya te dan asunto, remitente y un fragmento — eso es suficiente para responder "¿qué tengo?". Solo invoca `email_detail` cuando Carlos pida explícitamente más profundidad: "léeme ese", "qué dice completo", "dame el detalle del de Andrea", "resume ese correo", etc. Toma el `message_id` del correo correspondiente (de la respuesta previa de `today_summary`/`list_unread`) y resume el cuerpo. Si tienes duda de a cuál se refiere, pregunta antes de llamar. Uno a la vez.
 
-### 1. Conectar las cuentas faltantes
+### 5. README de `chamon-query`
+- Documentar el nuevo query_type, sus params, el comportamiento opt-in, el límite de truncado, y el manejo HTML→texto.
 
-- 2 llamadas a `standard_connectors--connect` con `connector_id=google_mail` (las 2 cuentas Gmail adicionales). Scope: `gmail.readonly`.
-- 1 llamada a `standard_connectors--connect` con `connector_id=microsoft_outlook` (Beryllium). Scope: `Mail.Read`.
+## Detalles técnicos
 
-Resultado: env vars disponibles en runtime:
-- `GOOGLE_MAIL_API_KEY`, `GOOGLE_MAIL_API_KEY_2`, `GOOGLE_MAIL_API_KEY_3`
-- `MICROSOFT_OUTLOOK_API_KEY`
-
-### 2. Refactor de `_shared/gmail.ts`
-
-- Agregar función `listGmailAccounts()` que escanea `process.env` (vía `Deno.env.toObject()`) buscando `GOOGLE_MAIL_API_KEY`, `_2`, `_3`, ... y devuelve la lista de keys disponibles.
-- Modificar `listPrimaryMessages()` para aceptar `accountKey: string` (cuál env var usar).
-- Agregar llamada inicial a `/users/me/profile` por cada cuenta (cacheada en memoria del módulo) para resolver el email real → así Chamón puede decir "carlos@gmail.com" en vez de "cuenta 2".
-- Cada `GmailMessageSummary` incluye `account: string` (el email) y `provider: "gmail"`.
-
-### 3. Nuevo `_shared/outlook.ts`
-
-Cliente paralelo a `gmail.ts`, mismo shape de respuesta:
-- `listOutlookAccounts()` — escanea `MICROSOFT_OUTLOOK_API_KEY`, `_2`, etc.
-- `listInboxMessages({ unreadOnly?, todayOnly?, maxResults?, accountKey })` — usa Microsoft Graph con OData:
-  - Endpoint base: `https://connector-gateway.lovable.dev/microsoft_outlook/me/messages`
-  - `$filter=isRead eq false` para unread
-  - `$filter=receivedDateTime ge YYYY-MM-DDTHH:MM:SSZ` para today (medianoche PR convertida a UTC)
-  - `$top`, `$orderby=receivedDateTime desc`
-  - `$select=subject,from,receivedDateTime,bodyPreview,isRead`
-- Llamada a `/me` (cacheada) para resolver el email del owner.
-- Output normalizado a `MessageSummary` con `provider: "outlook"`.
-
-Outlook **no tiene concepto de "Primary"** como Gmail. La inbox de Outlook ya viene relativamente limpia (las promociones suelen ir a Junk o Other automáticamente con Focused Inbox). Filtramos solo Inbox folder, sin filtro adicional de categoría.
-
-### 4. Nuevo orquestador `_shared/mailbox.ts`
-
-Tipo unificado:
-```ts
-interface MessageSummary {
-  id: string;
-  provider: "gmail" | "outlook";
-  account: string;       // email real
-  from: string;
-  subject: string;
-  snippet: string;
-  received_at: string;   // ISO UTC
-  unread: boolean;
-}
-```
-
-Funciones:
-- `fetchTodayAcrossMailboxes({ limit })` — `Promise.all` de todas las cuentas Gmail + Outlook, mergea, ordena por `received_at` desc, trunca a `limit` global.
-- `fetchUnreadAcrossMailboxes({ limit })` — igual pero `unreadOnly`.
-- Cada función acepta `accountFilter?: string` opcional → si Chamón dice "revisa solo mi cuenta de Beryllium", filtra antes del fetch.
-
-Manejo de errores por cuenta: si una cuenta falla (token expirado, etc.), se loguea pero NO tumba el response — se devuelven las que sí funcionaron + un campo `errors: [{ account, message }]` para que Chamón pueda mencionar "no pude revisar Beryllium ahora mismo".
-
-### 5. Actualizar handlers en `chamon-query`
-
-- `today_summary.ts` y `list_unread.ts` dejan de importar `gmail.ts` directo, ahora usan `mailbox.ts`.
-- Aceptan nuevo `params.account` opcional (string, match parcial case-insensitive contra el email de la cuenta).
-- Response incluye `accounts_checked: string[]` y `errors: [...]` además de los items.
-
-### 6. Actualizar router en `chamon-query/index.ts`
-
-Validar `params.account` (string opcional) en los dos query_types.
-
-### 7. Actualizar tool de ElevenLabs
-
-En la descripción del sub-property `params`, agregar:
-- `account` (opcional): "Filtra a una cuenta específica. Match parcial: 'beryllium', 'trabajo', 'personal'. Omite para ver todas."
-
-Actualizar también la descripción del query_type `today_summary` y `list_unread` para mencionar que pueden traer correos de Gmail Y Outlook combinados.
-
-### 8. Actualizar README
-
-Documentar las nuevas env vars, el sistema multi-cuenta, el filtro `account`, y el manejo de errores parciales.
-
-## Detalles técnicos relevantes
-
-**Resolución de email por cuenta** (cacheo): primera vez que se llama una cuenta en el lifetime del worker, se hace 1 GET extra a `/users/me/profile` (Gmail) o `/me` (Outlook). Resultado se guarda en un `Map<accountKey, email>` a nivel módulo. Las llamadas siguientes son free.
-
-**Zona horaria para "today"**: La función `todayInPR()` ya existe en `_shared/format.ts`. Para Outlook necesitamos convertir la medianoche PR de hoy a UTC para el `$filter`. Gmail usa `newer_than:1d` que es aproximado pero suficiente.
-
-**Performance**: 4 cuentas en paralelo + 1 llamada de profile cacheada por cuenta. Worst case en cold start: ~8 requests paralelas (4 list + 4 profile). En warm: 4 list. Latencia esperada similar a la actual (~1-2s).
-
-**Costo de scope adicional**: `Mail.Read` de Microsoft es read-only puro. No incluye send, no incluye modify. Equivalente a `gmail.readonly`.
+- **HTML strip básico**: regex para remover `<script>`, `<style>`, y luego `<[^>]+>`, decodificar entidades comunes (`&amp;`, `&lt;`, `&gt;`, `&nbsp;`, `&quot;`). Suficiente para emails de Airbnb/transaccionales típicos.
+- **Búsqueda multi-cuenta**: en paralelo con `Promise.allSettled`; primer success gana. Si todas fallan con 404, error claro tipo `"No encontré ese correo en ninguna cuenta conectada."`.
+- **Sin cambios** en `today_summary.ts` ni `list_unread.ts` — ya devuelven `id` por item, que es lo que Chamón pasará como `message_id`.
+- **Outlook**: este plan cubre solo Gmail (que es donde están los emails de Airbnb). Si más adelante se necesita para Outlook, se agrega un helper paralelo en `outlook.ts` y el orquestador.
 
 ## Archivos afectados
 
 ```text
-supabase/functions/_shared/gmail.ts            [refactor: multi-account, profile cache]
-supabase/functions/_shared/outlook.ts          [nuevo]
-supabase/functions/_shared/mailbox.ts          [nuevo: orquestador]
-supabase/functions/chamon-query/handlers/today_summary.ts   [editar: usar mailbox]
-supabase/functions/chamon-query/handlers/list_unread.ts     [editar: usar mailbox]
-supabase/functions/chamon-query/index.ts                    [editar: validar params.account]
-supabase/functions/chamon-query/README.md                   [editar: docs multi-cuenta]
+supabase/functions/_shared/gmail.ts                          [editar]
+supabase/functions/chamon-query/handlers/email_detail.ts     [nuevo]
+supabase/functions/chamon-query/index.ts                     [editar]
+supabase/functions/chamon-query/README.md                    [editar]
 ```
+
+(El system prompt de ElevenLabs lo actualizas tú en el dashboard de ElevenLabs; te dejo el texto exacto al terminar.)
 
 ## Validación
 
-1. Después de conectar las 3 cuentas adicionales, llamar a `chamon-query` con `today_summary` (sin filtro) → debe traer mezcla de las 4 cuentas, ordenado por fecha.
-2. Llamar con `today_summary` + `params={"account":"beryllium"}` → solo Beryllium.
-3. Probar con voz: "Chamón, ¿qué emails tengo hoy en Beryllium?"
-4. Probar fallback: simular token expirado en una cuenta (lo veremos en logs si pasa real) → response debe seguir trayendo las otras.
-
-## Lo que NO incluye
-
-- Send/reply en ningún provider (mantenemos read-only).
-- Marcar como leído / archivar.
-- Búsqueda por contenido (eso sigue pendiente como `search_email` futuro).
-- UI en el frontend para ver las cuentas conectadas — todo se gestiona vía Lovable Cloud → Connectors.
-
-## Una decisión pendiente
-
-Ya definimos antes:
-- **Etiquetado**: por dirección de email real (auto-resolved vía profile API).
-- **Default behavior**: fan-out a todas las cuentas siempre.
-
-Si confirmas el plan, en build mode arranco con la conexión de las 3 cuentas (te aparecerá el picker de OAuth 3 veces) y luego implemento el refactor.
+1. Llamar `today_summary` → tomar un `id` del response.
+2. Llamar `email_detail` con ese `id` → debe devolver `body_text` legible.
+3. Llamar `email_detail` con un `id` inventado → error claro.
+4. Probar con voz: "Chamón, ¿qué emails tengo?" → "Léeme el de Andrea completo".
