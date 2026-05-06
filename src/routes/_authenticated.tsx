@@ -47,9 +47,11 @@ function AuthLayout() {
       {/* Top header */}
       <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-background/90 px-4 backdrop-blur">
         <div className="flex items-center gap-3">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-accent text-accent-foreground">
-            <Radar className="h-4 w-4" />
-          </div>
+          <img
+            src="https://yvfkkdvhizjdpouoewch.supabase.co/storage/v1/object/public/images/mch_logo.png"
+            alt="Mission Control logo"
+            className="h-8 w-8 rounded-md object-contain"
+          />
           <div className="leading-tight">
             <p className="text-[13px] font-semibold">{t("app.name")}</p>
             <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{t("app.tagline")}</p>
