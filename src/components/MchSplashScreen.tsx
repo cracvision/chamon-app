@@ -41,10 +41,11 @@ export default function MchSplashScreen({
   }, [embedded]);
 
   useEffect(() => {
-    if (hold || phase !== 'visible') return;
+  useEffect(() => {
+    if (embedded || hold || phase !== 'visible') return;
     const t = window.setTimeout(() => setPhase('out'), duration);
     return () => window.clearTimeout(t);
-  }, [phase, duration, hold]);
+  }, [phase, duration, hold, embedded]);
 
   useEffect(() => {
     if (phase !== 'out') return;
