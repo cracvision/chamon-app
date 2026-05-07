@@ -92,6 +92,10 @@ function AuthPage() {
           </Button>
         </form>
 
+        <div className="flex justify-center">
+          <MchSplashScreen embedded size={140} />
+        </div>
+
         <button type="button" onClick={() => setMode(m => m === "signin" ? "signup" : "signin")} className="text-center text-sm text-muted-foreground hover:text-foreground">
           {mode === "signin" ? t("auth.noAccount") : t("auth.haveAccount")}{" "}
           <span className="text-accent">{mode === "signin" ? t("auth.signup") : t("auth.signin")}</span>
