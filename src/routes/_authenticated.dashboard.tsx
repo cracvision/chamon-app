@@ -52,7 +52,7 @@ function Dashboard() {
       <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_400px]">
         <div className="flex flex-col gap-5">
           {/* Today focus */}
-          <section className="surface p-4">
+          <section className="surface p-3 sm:p-4">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sun className="h-4 w-4 text-accent" />
@@ -70,7 +70,7 @@ function Dashboard() {
           </section>
 
           {/* Active missions grid */}
-          <section className="surface p-4">
+          <section className="surface p-3 sm:p-4">
             <div className="mb-3 flex items-center justify-between">
               <p className="label-mono">{t("section.activeMissions")}</p>
               <span className="font-mono text-[11px] tabular-nums text-muted-foreground">{activeMissions.length}</span>
@@ -91,7 +91,7 @@ function Dashboard() {
 
         {/* Right rail */}
         <div className="flex flex-col gap-5 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
-          <section className="surface p-4">
+          <section className="surface p-3 sm:p-4">
             <p className="label-mono mb-3">{t("section.detail")}</p>
             {selected ? (
               <MissionDetail mission={selected} tasks={tasks} areas={areas} />
@@ -100,7 +100,7 @@ function Dashboard() {
             )}
           </section>
 
-          <section className="surface p-4">
+          <section className="surface p-3 sm:p-4">
             <p className="label-mono mb-3">{t("section.upcoming")}</p>
             {upcoming.length === 0 ? (
               <p className="text-xs text-muted-foreground">—</p>
