@@ -300,6 +300,8 @@ const dict = {
     "ach.reason.achievement_unlocked": "Trophy unlocked",
     "ach.levelShort": "Lv {n}",
     "ach.recruit": "Recruit",
+    "agent.show": "Show agent",
+    "agent.hide": "Hide agent",
   },
 } as const;
 
