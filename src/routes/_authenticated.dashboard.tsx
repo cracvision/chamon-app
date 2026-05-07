@@ -133,13 +133,13 @@ function Dashboard() {
 
 function Kpi({ icon: Icon, label, value, hint, danger }: { icon: any; label: string; value: string; hint?: string; danger?: boolean }) {
   return (
-    <div className="surface flex items-center gap-3 p-3">
-      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-card-elevated">
+    <div className="surface flex items-center gap-2.5 p-2.5 sm:gap-3 sm:p-3">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-card-elevated sm:h-9 sm:w-9">
         <Icon className={`h-4 w-4 ${danger ? "text-destructive" : "text-accent"}`} />
       </div>
       <div className="min-w-0">
         <p className="label-mono">{label}</p>
-        <p className={`font-mono text-lg leading-tight tabular-nums ${danger ? "text-destructive" : "text-foreground"}`}>
+        <p className={`font-mono text-base leading-tight tabular-nums sm:text-lg ${danger ? "text-destructive" : "text-foreground"}`}>
           {value}{hint && <span className="ml-1 text-[10px] text-muted-foreground">{hint}</span>}
         </p>
       </div>
