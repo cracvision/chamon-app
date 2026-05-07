@@ -46,25 +46,25 @@ function AuthLayout() {
   return (
     <div className="min-h-screen bg-background">
       {/* Top header */}
-      <header className="sticky top-0 z-40 flex h-14 items-center justify-between gap-2 border-b border-border bg-background/90 px-3 backdrop-blur sm:gap-3 sm:px-4">
-        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+      <header className="sticky top-0 z-40 flex h-14 items-center justify-between gap-2 border-b border-border bg-background/90 px-2 backdrop-blur lg:gap-3 lg:px-4">
+        <div className="flex min-w-0 flex-1 items-center gap-2 lg:gap-3">
           <img
             src="https://yvfkkdvhizjdpouoewch.supabase.co/storage/v1/object/public/images/mch_logo.png"
             alt="Mission Control logo"
-            className="h-7 w-7 shrink-0 rounded-md object-contain sm:h-8 sm:w-8"
+            className="h-7 w-7 shrink-0 rounded-md object-contain lg:h-8 lg:w-8"
           />
           <div className="min-w-0 leading-tight">
-            <p className="truncate text-[12px] font-semibold sm:text-[13px]">{t("app.name")}</p>
-            <p className="hidden font-mono text-[10px] uppercase tracking-widest text-muted-foreground sm:block">{t("app.tagline")}</p>
+            <p className="truncate whitespace-nowrap text-[12px] font-semibold lg:text-[13px]">{t("app.name")}</p>
+            <p className="hidden font-mono text-[10px] uppercase tracking-widest text-muted-foreground lg:block">{t("app.tagline")}</p>
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+        <div className="flex shrink-0 items-center gap-1.5 lg:gap-3">
           <XpHud />
-          <span className="hidden font-mono text-[12px] tabular-nums text-muted-foreground md:inline">{time} AST</span>
+          <span className="hidden font-mono text-[12px] tabular-nums text-muted-foreground xl:inline">{time} AST</span>
           <LangToggle />
-          <Button size="sm" onClick={() => setQuickOpen(true)} className="h-8 bg-accent text-accent-foreground hover:bg-accent/90" aria-label={t("quickAdd")}>
-            <Plus className="h-4 w-4 sm:mr-1" /><span className="hidden sm:inline">{t("quickAdd")}</span>
+          <Button size="sm" onClick={() => setQuickOpen(true)} className="h-8 w-8 p-0 bg-accent text-accent-foreground hover:bg-accent/90 lg:w-auto lg:px-3" aria-label={t("quickAdd")}>
+            <Plus className="h-4 w-4 lg:mr-1" /><span className="hidden lg:inline">{t("quickAdd")}</span>
           </Button>
         </div>
       </header>
