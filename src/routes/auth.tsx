@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { LangToggle } from "@/components/LangToggle";
 import { Radar, Loader2 } from "lucide-react";
+import MchSplashScreen from "@/components/MchSplashScreen";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
@@ -90,6 +91,10 @@ function AuthPage() {
             {mode === "signin" ? t("auth.signin") : t("auth.signup")}
           </Button>
         </form>
+
+        <div className="flex justify-center">
+          <MchSplashScreen embedded size={140} />
+        </div>
 
         <button type="button" onClick={() => setMode(m => m === "signin" ? "signup" : "signin")} className="text-center text-sm text-muted-foreground hover:text-foreground">
           {mode === "signin" ? t("auth.noAccount") : t("auth.haveAccount")}{" "}
