@@ -39,7 +39,11 @@ export function FocusTaskCard({ task, mission }: Props) {
             </Link>
           )}
           <span>·</span>
-          <span className={overdue ? "text-destructive" : ""}>{dueLabel(task.due_date, t)}</span>
+          {task.status === "done" ? (
+            <span style={{ color: "#36FF00" }}>{t("task.completed")}</span>
+          ) : (
+            <span className={overdue ? "text-destructive" : ""}>{dueLabel(task.due_date, t)}</span>
+          )}
           <span>·</span>
           <FrictionBars n={task.friction_level} />
         </div>
