@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 const SCRIPT_ID = "elevenlabs-convai-embed";
 const SCRIPT_SRC = "https://unpkg.com/@elevenlabs/convai-widget-embed";
@@ -15,7 +15,13 @@ declare module "react" {
   }
 }
 
-export function ChamonVoiceWidget() {
+interface ChamonVoiceWidgetProps {
+  hidden?: boolean;
+}
+
+export function ChamonVoiceWidget({ hidden = false }: ChamonVoiceWidgetProps) {
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     if (typeof document === "undefined") return;
     if (document.getElementById(SCRIPT_ID)) return;
@@ -27,5 +33,14 @@ export function ChamonVoiceWidget() {
     document.head.appendChild(s);
   }, []);
 
-  return <elevenlabs-convai agent-id={AGENT_ID}></elevenlabs-convai>;
+  return (
+    <div
+      ref={wrapperRef}
+      id="chamon-agent-widget"
+      className={hidden ? "elevenlabs-hidden" : ""}
+      aria-hidden={hidden}
+    >
+      <elevenlabs-convai agent-id={AGENT_ID}></elevenlabs-convai>
+    </div>
+  );
 }

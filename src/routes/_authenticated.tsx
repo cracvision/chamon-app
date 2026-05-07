@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Navigate, Link, useRouterState } from "@tansta
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
-import { Radar, LayoutDashboard, Sun, Calendar, Users, Settings, LogOut, Plus, Trophy } from "lucide-react";
+import { Radar, LayoutDashboard, Sun, Calendar, Users, Settings, LogOut, Plus, Trophy, MessageCircle, MessageCircleOff } from "lucide-react";
 import { LangToggle } from "@/components/LangToggle";
 import { Button } from "@/components/ui/button";
 import { QuickAddDialog } from "@/components/QuickAddDialog";
@@ -19,6 +19,7 @@ function AuthLayout() {
   const { t } = useI18n();
   const [now, setNow] = useState(() => new Date());
   const [quickOpen, setQuickOpen] = useState(false);
+  const [agentHidden, setAgentHidden] = useState(true);
   const path = useRouterState({ select: s => s.location.pathname });
 
   useEffect(() => {
@@ -87,6 +88,14 @@ function AuthLayout() {
             })}
           </nav>
           <div className="mt-auto border-t border-border p-3">
+            <button
+              onClick={() => setAgentHidden(v => !v)}
+              aria-pressed={!agentHidden}
+              className="mb-2 flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-muted-foreground hover:bg-card-elevated hover:text-foreground"
+            >
+              {agentHidden ? <MessageCircle className="h-4 w-4" /> : <MessageCircleOff className="h-4 w-4 text-accent" />}
+              {agentHidden ? t("agent.show") : t("agent.hide")}
+            </button>
             <div className="mb-2 px-2">
               <p className="label-mono">user</p>
               <p className="truncate text-xs text-foreground">{user.email}</p>
@@ -120,7 +129,7 @@ function AuthLayout() {
       </div>
 
       <QuickAddDialog open={quickOpen} onOpenChange={setQuickOpen} />
-      <ChamonVoiceWidget />
+      <ChamonVoiceWidget hidden={agentHidden} />
       <XpWatcher />
     </div>
   );
