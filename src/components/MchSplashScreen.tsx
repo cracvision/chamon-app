@@ -35,9 +35,10 @@ export default function MchSplashScreen({
   const [phase, setPhase] = useState<'in' | 'visible' | 'out'>(embedded ? 'visible' : 'in');
 
   useEffect(() => {
+    if (embedded) return;
     const t = window.setTimeout(() => setPhase('visible'), 20);
     return () => window.clearTimeout(t);
-  }, []);
+  }, [embedded]);
 
   useEffect(() => {
     if (hold || phase !== 'visible') return;
