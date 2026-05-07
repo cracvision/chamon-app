@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { LangToggle } from "@/components/LangToggle";
 import { Radar, Loader2 } from "lucide-react";
+import MchSplashScreen from "@/components/MchSplashScreen";
 
 export const Route = createFileRoute("/auth")({
   component: AuthPage,
