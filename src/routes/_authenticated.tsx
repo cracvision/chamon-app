@@ -129,7 +129,7 @@ function AuthLayout() {
       </div>
 
       <QuickAddDialog open={quickOpen} onOpenChange={setQuickOpen} />
-      <ChamonVoiceWidget />
+      <ChamonVoiceWidget hidden={agentHidden} />
       <XpWatcher />
     </div>
   );
