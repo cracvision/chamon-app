@@ -286,9 +286,15 @@ function TaskRow({ task, onUpdate, onDelete }: { task: Task; onUpdate: (p: Parti
             >
               <Pencil className="h-3.5 w-3.5" />
             </button>
-            <span className={`font-mono text-[10px] uppercase tracking-wider ${overdue ? "text-destructive" : "text-muted-foreground"}`}>
-              {dueLabel(task.due_date, t)}
-            </span>
+            {task.status === "done" ? (
+              <span className="font-mono text-[10px] uppercase tracking-wider" style={{ color: "#36FF00" }}>
+                {t("task.completed")}
+              </span>
+            ) : (
+              <span className={`font-mono text-[10px] uppercase tracking-wider ${overdue ? "text-destructive" : "text-muted-foreground"}`}>
+                {dueLabel(task.due_date, t)}
+              </span>
+            )}
             <button onClick={e => { e.preventDefault(); onUpdate({ is_today: !task.is_today }); }}
               title={task.is_today ? t("task.unmarkToday") : t("task.markToday")}
               className={`rounded p-1 ${task.is_today ? "text-accent" : "text-muted-foreground hover:text-foreground"}`}>
