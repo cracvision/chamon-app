@@ -51,6 +51,7 @@ const dict = {
     "mission.priority.high": "Alta",
     "mission.openCount": "abiertas",
     "mission.empty": "Sin misiones todavía. Crea tu primera misión para empezar.",
+    "mission.accomplished": "Misión Cumplida",
     "task.new": "Nueva tarea",
     "task.title": "Título",
     "task.notes": "Notas",
