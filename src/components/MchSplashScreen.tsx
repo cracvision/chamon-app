@@ -11,6 +11,8 @@ interface MchSplashScreenProps {
   onComplete?: () => void;
   /** If true, the splash never auto-dismisses — use while bootstrapping is in flight. */
   hold?: boolean;
+  /** If true, render the SVG inline (no fullscreen overlay, no fade timers). */
+  embedded?: boolean;
 }
 
 /**
