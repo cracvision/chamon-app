@@ -29,12 +29,7 @@ export function MissionCard({ mission, tasks, index, selected, onSelect }: Props
       }`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <span className="rounded-md border border-border bg-background px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-foreground">M-{code}</span>
-        {completed ? (
-          <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-success">
-            <Trophy className="h-3 w-3" />
-            {t("mission.accomplished")}
-          </span>
-        ) : (
+        {!completed && (
           <span className={`inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest ${h.color}`}>
             <span className={`h-1.5 w-1.5 rounded-full bg-current ${health === "crit" ? "animate-pulse" : ""}`} />
             {t(h.label)}
@@ -48,11 +43,16 @@ export function MissionCard({ mission, tasks, index, selected, onSelect }: Props
 
       <div className="flex flex-col gap-1.5">
         <div className="h-1 w-full overflow-hidden rounded-full bg-card-elevated">
-          <div className={`h-full rounded-full transition-all ${completed ? "bg-success" : "bg-accent"}`} style={{ width: `${pct}%` }} />
+          <div
+            className="h-full rounded-full transition-all"
+            style={{ width: `${pct}%`, backgroundColor: completed ? "#36FF00" : undefined }}
+          >
+            {!completed && <div className="h-full w-full bg-accent" />}
+          </div>
         </div>
         <div className="flex items-center justify-between font-mono text-[11px] text-muted-foreground">
           {completed ? (
-            <span className="inline-flex items-center gap-1 text-success">
+            <span className="inline-flex items-center gap-1" style={{ color: "#36FF00" }}>
               <Trophy className="h-3 w-3" />
               {t("mission.accomplished")} · 100%
             </span>
