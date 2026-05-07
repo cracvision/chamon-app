@@ -150,6 +150,8 @@ const dict = {
     "ach.reason.achievement_unlocked": "Trofeo desbloqueado",
     "ach.levelShort": "Lv {n}",
     "ach.recruit": "Recluta",
+    "agent.show": "Mostrar agente",
+    "agent.hide": "Ocultar agente",
   },
   en: {
     "app.name": "Mission Control",
