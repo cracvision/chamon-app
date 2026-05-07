@@ -44,16 +44,14 @@ export function MissionCard({ mission, tasks, index, selected, onSelect }: Props
       <div className="flex flex-col gap-1.5">
         <div className="h-1 w-full overflow-hidden rounded-full bg-card-elevated">
           <div
-            className="h-full rounded-full transition-all"
-            style={{ width: `${pct}%`, backgroundColor: completed ? "#36FF00" : undefined }}
-          >
-            {!completed && <div className="h-full w-full bg-accent" />}
-          </div>
+            className={`h-full rounded-full transition-all ${completed ? "bg-success" : "bg-accent"}`}
+            style={{ width: `${pct}%` }}
+          />
         </div>
         <div className="flex items-center justify-between font-mono text-[11px] text-muted-foreground">
           {completed ? (
-            <span className="inline-flex items-center gap-1" style={{ color: "#36FF00" }}>
-              <Trophy className="h-3 w-3" />
+            <span className="inline-flex items-center gap-1 text-success">
+              <Trophy className="h-3 w-3 text-accent" />
               {t("mission.accomplished")} · 100%
             </span>
           ) : (

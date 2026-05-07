@@ -40,7 +40,7 @@ export function FocusTaskCard({ task, mission }: Props) {
           )}
           <span>·</span>
           {task.status === "done" ? (
-            <span style={{ color: "#36FF00" }}>{t("task.completed")}</span>
+            <span className="text-success">{t("task.completed")}</span>
           ) : (
             <span className={overdue ? "text-destructive" : ""}>{dueLabel(task.due_date, t)}</span>
           )}

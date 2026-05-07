@@ -287,7 +287,7 @@ function TaskRow({ task, onUpdate, onDelete }: { task: Task; onUpdate: (p: Parti
               <Pencil className="h-3.5 w-3.5" />
             </button>
             {task.status === "done" ? (
-              <span className="font-mono text-[10px] uppercase tracking-wider" style={{ color: "#36FF00" }}>
+              <span className="font-mono text-[10px] uppercase tracking-wider text-success">
                 {t("task.completed")}
               </span>
             ) : (
