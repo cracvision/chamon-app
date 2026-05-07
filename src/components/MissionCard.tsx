@@ -25,18 +25,14 @@ export function MissionCard({ mission, tasks, index, selected, onSelect }: Props
   return (
     <button onClick={onSelect}
       className={`group relative flex flex-col gap-3 rounded-[10px] border p-4 text-left transition-all ${
-        completed
-          ? "border-success/40 bg-success/5 hover:bg-success/10"
-          : selected
-            ? "border-accent bg-card-elevated"
-            : "border-border bg-card hover:bg-card-elevated"
+        selected ? "border-accent bg-card-elevated" : "border-border bg-card hover:bg-card-elevated"
       }`}>
       <div className="flex items-start justify-between">
         <span className="rounded-md border border-border bg-background px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-foreground">M-{code}</span>
         {completed ? (
           <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-success">
             <Trophy className="h-3 w-3" />
-            {t("filter.completed")}
+            {t("mission.accomplished")}
           </span>
         ) : (
           <span className={`inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest ${h.color}`}>
@@ -47,7 +43,7 @@ export function MissionCard({ mission, tasks, index, selected, onSelect }: Props
       </div>
 
       <div className="min-h-[40px]">
-        <h3 className={`text-[14px] font-medium leading-snug ${completed ? "text-foreground/80 line-through decoration-success/50" : "text-foreground"}`}>{mission.title}</h3>
+        <h3 className="text-[14px] font-medium leading-snug text-foreground">{mission.title}</h3>
       </div>
 
       <div className="flex flex-col gap-1.5">
@@ -58,7 +54,7 @@ export function MissionCard({ mission, tasks, index, selected, onSelect }: Props
           {completed ? (
             <span className="inline-flex items-center gap-1 text-success">
               <Trophy className="h-3 w-3" />
-              {t("filter.completed")} · 100%
+              {t("mission.accomplished")} · 100%
             </span>
           ) : (
             <span>{open} {t("mission.openCount")} · {pct}%</span>
