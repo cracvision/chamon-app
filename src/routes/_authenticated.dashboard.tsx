@@ -39,9 +39,9 @@ function Dashboard() {
   const selected = activeMissions.find(m => m.id === selectedId);
 
   return (
-    <div className="px-4 py-5 lg:px-6">
+    <div className="px-3 py-4 lg:px-6 lg:py-5">
       {/* KPI row */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         <Kpi icon={Target} label={t("kpi.activeMissions")} value={String(activeMissions.length)} />
         <Kpi icon={ListTodo} label={t("kpi.openTasks")} value={String(openCount)} />
         <Kpi icon={Trophy} label="XP" value={String(stats?.total_xp ?? 0)} hint={stats?.level_name || "Recluta"} />
