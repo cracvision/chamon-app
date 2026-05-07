@@ -215,6 +215,7 @@ const dict = {
     "task.status.doing": "Doing",
     "task.status.waiting": "Waiting",
     "task.status.done": "Done",
+    "task.completed": "Completed",
     "task.empty": "No tasks in this mission yet.",
     "today.empty": "Nothing in focus today. Mark tasks to concentrate.",
     "today.remind": "Remind me by email",
