@@ -57,18 +57,26 @@ export default function MchSplashScreen({
       role="status"
       aria-live="polite"
       aria-label="Loading"
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        opacity: phase === 'visible' ? 1 : 0,
-        transition: 'opacity 400ms ease-out',
-        zIndex: 9999,
-        pointerEvents: phase === 'out' ? 'none' : 'auto',
-      }}
+      style={
+        embedded
+          ? {
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }
+          : {
+              position: 'fixed',
+              inset: 0,
+              backgroundColor,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: phase === 'visible' ? 1 : 0,
+              transition: 'opacity 400ms ease-out',
+              zIndex: 9999,
+              pointerEvents: phase === 'out' ? 'none' : 'auto',
+            }
+      }
     >
       <svg
         width={size}
