@@ -63,6 +63,15 @@ function AuthLayout() {
           <XpHud />
           <span className="hidden font-mono text-[12px] tabular-nums text-muted-foreground xl:inline">{time} AST</span>
           <LangToggle />
+          <button
+            onClick={() => setAgentHidden(v => !v)}
+            aria-pressed={!agentHidden}
+            aria-label={agentHidden ? t("agent.show") : t("agent.hide")}
+            title={agentHidden ? t("agent.show") : t("agent.hide")}
+            className="flex h-8 w-8 items-center justify-center rounded-md border border-border text-muted-foreground hover:bg-card-elevated hover:text-foreground lg:hidden"
+          >
+            {agentHidden ? <MessageCircle className="h-4 w-4" /> : <MessageCircleOff className="h-4 w-4 text-accent" />}
+          </button>
           <Button size="sm" onClick={() => setQuickOpen(true)} className="h-8 w-8 p-0 bg-accent text-accent-foreground hover:bg-accent/90 lg:w-auto lg:px-3" aria-label={t("quickAdd")}>
             <Plus className="h-4 w-4 lg:mr-1" /><span className="hidden lg:inline">{t("quickAdd")}</span>
           </Button>
