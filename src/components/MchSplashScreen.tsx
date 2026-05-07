@@ -30,8 +30,9 @@ export default function MchSplashScreen({
   size = 240,
   onComplete,
   hold = false,
+  embedded = false,
 }: MchSplashScreenProps) {
-  const [phase, setPhase] = useState<'in' | 'visible' | 'out'>('in');
+  const [phase, setPhase] = useState<'in' | 'visible' | 'out'>(embedded ? 'visible' : 'in');
 
   useEffect(() => {
     const t = window.setTimeout(() => setPhase('visible'), 20);
