@@ -27,7 +27,7 @@ export function MissionCard({ mission, tasks, index, selected, onSelect }: Props
       className={`group relative flex flex-col gap-3 rounded-[10px] border p-4 text-left transition-all ${
         selected ? "border-accent bg-card-elevated" : "border-border bg-card hover:bg-card-elevated"
       }`}>
-      <div className="flex items-start justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-2">
         <span className="rounded-md border border-border bg-background px-1.5 py-0.5 font-mono text-[11px] tabular-nums text-foreground">M-{code}</span>
         {completed ? (
           <span className="inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-success">

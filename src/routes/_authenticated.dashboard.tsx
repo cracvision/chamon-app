@@ -39,9 +39,9 @@ function Dashboard() {
   const selected = activeMissions.find(m => m.id === selectedId);
 
   return (
-    <div className="px-4 py-5 lg:px-6">
+    <div className="px-3 py-4 lg:px-6 lg:py-5">
       {/* KPI row */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4">
         <Kpi icon={Target} label={t("kpi.activeMissions")} value={String(activeMissions.length)} />
         <Kpi icon={ListTodo} label={t("kpi.openTasks")} value={String(openCount)} />
         <Kpi icon={Trophy} label="XP" value={String(stats?.total_xp ?? 0)} hint={stats?.level_name || "Recluta"} />
@@ -52,7 +52,7 @@ function Dashboard() {
       <div className="mt-5 grid gap-5 lg:grid-cols-[1fr_400px]">
         <div className="flex flex-col gap-5">
           {/* Today focus */}
-          <section className="surface p-4">
+          <section className="surface p-3 sm:p-4">
             <div className="mb-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sun className="h-4 w-4 text-accent" />
@@ -70,7 +70,7 @@ function Dashboard() {
           </section>
 
           {/* Active missions grid */}
-          <section className="surface p-4">
+          <section className="surface p-3 sm:p-4">
             <div className="mb-3 flex items-center justify-between">
               <p className="label-mono">{t("section.activeMissions")}</p>
               <span className="font-mono text-[11px] tabular-nums text-muted-foreground">{activeMissions.length}</span>
@@ -91,7 +91,7 @@ function Dashboard() {
 
         {/* Right rail */}
         <div className="flex flex-col gap-5 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto">
-          <section className="surface p-4">
+          <section className="surface p-3 sm:p-4">
             <p className="label-mono mb-3">{t("section.detail")}</p>
             {selected ? (
               <MissionDetail mission={selected} tasks={tasks} areas={areas} />
@@ -100,7 +100,7 @@ function Dashboard() {
             )}
           </section>
 
-          <section className="surface p-4">
+          <section className="surface p-3 sm:p-4">
             <p className="label-mono mb-3">{t("section.upcoming")}</p>
             {upcoming.length === 0 ? (
               <p className="text-xs text-muted-foreground">—</p>
@@ -133,13 +133,13 @@ function Dashboard() {
 
 function Kpi({ icon: Icon, label, value, hint, danger }: { icon: any; label: string; value: string; hint?: string; danger?: boolean }) {
   return (
-    <div className="surface flex items-center gap-3 p-3">
-      <div className="flex h-9 w-9 items-center justify-center rounded-md bg-card-elevated">
+    <div className="surface flex items-center gap-2.5 p-2.5 sm:gap-3 sm:p-3">
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-card-elevated sm:h-9 sm:w-9">
         <Icon className={`h-4 w-4 ${danger ? "text-destructive" : "text-accent"}`} />
       </div>
       <div className="min-w-0">
         <p className="label-mono">{label}</p>
-        <p className={`font-mono text-lg leading-tight tabular-nums ${danger ? "text-destructive" : "text-foreground"}`}>
+        <p className={`font-mono text-base leading-tight tabular-nums sm:text-lg ${danger ? "text-destructive" : "text-foreground"}`}>
           {value}{hint && <span className="ml-1 text-[10px] text-muted-foreground">{hint}</span>}
         </p>
       </div>
