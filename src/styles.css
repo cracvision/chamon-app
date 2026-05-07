@@ -212,3 +212,13 @@
     margin-bottom: 64px;
   }
 }
+
+/* ElevenLabs widget — hide without unmounting (preserves session/clientTools) */
+.elevenlabs-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
+}
+elevenlabs-convai {
+  z-index: 9999 !important;
+}
