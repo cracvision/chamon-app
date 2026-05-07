@@ -19,6 +19,7 @@ function AuthLayout() {
   const { t } = useI18n();
   const [now, setNow] = useState(() => new Date());
   const [quickOpen, setQuickOpen] = useState(false);
+  const [agentHidden, setAgentHidden] = useState(true);
   const path = useRouterState({ select: s => s.location.pathname });
 
   useEffect(() => {
