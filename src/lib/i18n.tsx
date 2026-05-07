@@ -64,6 +64,7 @@ const dict = {
     "task.status.doing": "En curso",
     "task.status.waiting": "Esperando",
     "task.status.done": "Hecha",
+    "task.completed": "Completada",
     "task.empty": "Aún no hay tareas en esta misión.",
     "today.empty": "Nada en foco hoy. Marca tareas para concentrarte.",
     "today.remind": "Recordarme por correo",
