@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Navigate, Link, useRouterState } from "@tansta
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
-import { Radar, LayoutDashboard, Sun, Calendar, Users, Settings, LogOut, Plus, Trophy, MessageCircle, MessageCircleOff } from "lucide-react";
+import { Radar, LayoutDashboard, Sun, Calendar, Users, Settings, LogOut, Plus, Trophy, MessageCircle, MessageCircleOff, Bot } from "lucide-react";
 import { LangToggle } from "@/components/LangToggle";
 import { Button } from "@/components/ui/button";
 import { QuickAddDialog } from "@/components/QuickAddDialog";
