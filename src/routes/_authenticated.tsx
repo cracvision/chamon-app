@@ -118,7 +118,7 @@ function AuthLayout() {
 
         {/* Mobile bottom nav */}
         <nav className="fixed bottom-0 left-0 right-0 z-30 grid grid-cols-5 border-t border-border bg-card lg:hidden">
-          {navItems.map(item => {
+          {navItems.filter(i => i.to !== "/agent" && i.to !== "/achievements").map(item => {
             const Icon = item.icon;
             const active = path === item.to;
             return (
