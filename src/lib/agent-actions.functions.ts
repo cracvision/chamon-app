@@ -8,7 +8,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 // All execution writes an audit row to public.events.
 // ============================================================================
 
-type Json = Record<string, unknown>;
+type Json = any;
 
 const idSchema = z.object({ id: z.string().uuid() });
 
