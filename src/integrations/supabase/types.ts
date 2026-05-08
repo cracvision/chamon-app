@@ -1016,6 +1016,7 @@ export type Database = {
         }[]
       }
       evaluate_achievements: { Args: { _user_id: string }; Returns: undefined }
+      execute_agent_action: { Args: { _action_id: string }; Returns: Json }
     }
     Enums: {
       [_ in never]: never
