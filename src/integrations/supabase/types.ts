@@ -47,6 +47,72 @@ export type Database = {
         }
         Relationships: []
       }
+      agent_actions: {
+        Row: {
+          action_type: string
+          agent_name: string | null
+          approved_at: string | null
+          approved_by: string | null
+          confidence_score: number | null
+          created_at: string
+          error_message: string | null
+          executed_at: string | null
+          group_key: string | null
+          id: string
+          idempotency_key: string | null
+          payload: Json
+          requires_approval: boolean
+          result: Json | null
+          source_ref: string | null
+          source_type: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          action_type: string
+          agent_name?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          error_message?: string | null
+          executed_at?: string | null
+          group_key?: string | null
+          id?: string
+          idempotency_key?: string | null
+          payload?: Json
+          requires_approval?: boolean
+          result?: Json | null
+          source_ref?: string | null
+          source_type: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          action_type?: string
+          agent_name?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          error_message?: string | null
+          executed_at?: string | null
+          group_key?: string | null
+          id?: string
+          idempotency_key?: string | null
+          payload?: Json
+          requires_approval?: boolean
+          result?: Json | null
+          source_ref?: string | null
+          source_type?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       areas: {
         Row: {
           code: string | null
@@ -92,10 +158,68 @@ export type Database = {
         }
         Relationships: []
       }
+      assets: {
+        Row: {
+          brand: string | null
+          category: string | null
+          created_at: string
+          id: string
+          model: string | null
+          name: string
+          notes: string | null
+          property_id: string | null
+          purchase_date: string | null
+          serial_number: string | null
+          updated_at: string
+          user_id: string
+          warranty_expires_at: string | null
+        }
+        Insert: {
+          brand?: string | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          model?: string | null
+          name: string
+          notes?: string | null
+          property_id?: string | null
+          purchase_date?: string | null
+          serial_number?: string | null
+          updated_at?: string
+          user_id: string
+          warranty_expires_at?: string | null
+        }
+        Update: {
+          brand?: string | null
+          category?: string | null
+          created_at?: string
+          id?: string
+          model?: string | null
+          name?: string
+          notes?: string | null
+          property_id?: string | null
+          purchase_date?: string | null
+          serial_number?: string | null
+          updated_at?: string
+          user_id?: string
+          warranty_expires_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assets_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       attachments: {
         Row: {
+          asset_id: string | null
           created_at: string
           created_by: string | null
+          extracted_data: Json | null
           file_size: number | null
           filename: string
           id: string
@@ -106,8 +230,10 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          asset_id?: string | null
           created_at?: string
           created_by?: string | null
+          extracted_data?: Json | null
           file_size?: number | null
           filename: string
           id?: string
@@ -118,8 +244,10 @@ export type Database = {
           user_id: string
         }
         Update: {
+          asset_id?: string | null
           created_at?: string
           created_by?: string | null
+          extracted_data?: Json | null
           file_size?: number | null
           filename?: string
           id?: string
@@ -130,6 +258,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "attachments_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "attachments_mission_id_fkey"
             columns: ["mission_id"]
@@ -193,6 +328,75 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      email_ingestion_log: {
+        Row: {
+          classification: string | null
+          confidence_score: number | null
+          created_at: string
+          error_message: string | null
+          extracted_payload: Json | null
+          from_address: string | null
+          gmail_message_id: string
+          gmail_thread_id: string | null
+          id: string
+          processed_at: string | null
+          property_id: string | null
+          received_at: string | null
+          reservation_id: string | null
+          subject: string | null
+          user_id: string
+        }
+        Insert: {
+          classification?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          error_message?: string | null
+          extracted_payload?: Json | null
+          from_address?: string | null
+          gmail_message_id: string
+          gmail_thread_id?: string | null
+          id?: string
+          processed_at?: string | null
+          property_id?: string | null
+          received_at?: string | null
+          reservation_id?: string | null
+          subject?: string | null
+          user_id: string
+        }
+        Update: {
+          classification?: string | null
+          confidence_score?: number | null
+          created_at?: string
+          error_message?: string | null
+          extracted_payload?: Json | null
+          from_address?: string | null
+          gmail_message_id?: string
+          gmail_thread_id?: string | null
+          id?: string
+          processed_at?: string | null
+          property_id?: string | null
+          received_at?: string | null
+          reservation_id?: string | null
+          subject?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_ingestion_log_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_ingestion_log_reservation_id_fkey"
+            columns: ["reservation_id"]
+            isOneToOne: false
+            referencedRelation: "reservations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       events: {
         Row: {
@@ -372,6 +576,134 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      properties: {
+        Row: {
+          address: string | null
+          code: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          timezone: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          code?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          timezone?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          code?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          timezone?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reservations: {
+        Row: {
+          calendar_event_id: string | null
+          check_in_date: string | null
+          check_in_time: string | null
+          check_out_date: string | null
+          check_out_time: string | null
+          cleaning_fee: number | null
+          confidence_score: number | null
+          confirmation_code: string | null
+          created_at: string
+          guest_email: string | null
+          guest_name: string | null
+          guest_phone: string | null
+          id: string
+          mission_id: string | null
+          notes: string | null
+          number_of_guests: number | null
+          payout_amount: number | null
+          property_id: string | null
+          source: string
+          source_email_ids: string[] | null
+          status: string
+          taxes_or_fees: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          calendar_event_id?: string | null
+          check_in_date?: string | null
+          check_in_time?: string | null
+          check_out_date?: string | null
+          check_out_time?: string | null
+          cleaning_fee?: number | null
+          confidence_score?: number | null
+          confirmation_code?: string | null
+          created_at?: string
+          guest_email?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
+          id?: string
+          mission_id?: string | null
+          notes?: string | null
+          number_of_guests?: number | null
+          payout_amount?: number | null
+          property_id?: string | null
+          source?: string
+          source_email_ids?: string[] | null
+          status?: string
+          taxes_or_fees?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          calendar_event_id?: string | null
+          check_in_date?: string | null
+          check_in_time?: string | null
+          check_out_date?: string | null
+          check_out_time?: string | null
+          cleaning_fee?: number | null
+          confidence_score?: number | null
+          confirmation_code?: string | null
+          created_at?: string
+          guest_email?: string | null
+          guest_name?: string | null
+          guest_phone?: string | null
+          id?: string
+          mission_id?: string | null
+          notes?: string | null
+          number_of_guests?: number | null
+          payout_amount?: number | null
+          property_id?: string | null
+          source?: string
+          source_email_ids?: string[] | null
+          status?: string
+          taxes_or_fees?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservations_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       task_contacts: {
         Row: {
@@ -556,6 +888,59 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      vendors: {
+        Row: {
+          category: string | null
+          created_at: string
+          email: string | null
+          id: string
+          last_service_date: string | null
+          name: string
+          notes: string | null
+          phone: string | null
+          property_id: string | null
+          rating: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_service_date?: string | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          property_id?: string | null
+          rating?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          email?: string | null
+          id?: string
+          last_service_date?: string | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          property_id?: string | null
+          rating?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendors_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       xp_events: {
         Row: {
