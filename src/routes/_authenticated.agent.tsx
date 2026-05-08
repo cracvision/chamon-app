@@ -1,18 +1,18 @@
 import { createFileRoute, useRouter } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   listAgentActions,
   executeAgentAction,
   rejectAgentAction,
   proposeAgentAction,
-} from "@/lib/agent-actions.functions";
+} from "@/lib/agent-actions";
 import { toast } from "sonner";
-import { CheckCircle2, XCircle, Play, RefreshCw, Bot } from "lucide-react";
+import { CheckCircle2, XCircle, Play, RefreshCw, Bot, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/agent")({
   component: AgentInbox,
@@ -27,52 +27,48 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 function AgentInbox() {
-  const list = useServerFn(listAgentActions);
-  const execute = useServerFn(executeAgentAction);
-  const reject = useServerFn(rejectAgentAction);
-  const propose = useServerFn(proposeAgentAction);
   const router = useRouter();
   const [filter, setFilter] = useState<string>("");
 
   const q = useQuery({
     queryKey: ["agent_actions", filter],
-    queryFn: () => list({ data: filter ? { status: filter } : {} }),
+    queryFn: () => listAgentActions(filter ? { status: filter } : undefined),
   });
 
   const refresh = () => q.refetch();
 
   const exec = useMutation({
-    mutationFn: (id: string) => execute({ data: { id } }),
+    mutationFn: (id: string) => executeAgentAction(id),
     onSuccess: () => { toast.success("Action executed"); refresh(); router.invalidate(); },
     onError: (e: any) => toast.error(e?.message ?? "Execute failed"),
   });
   const rej = useMutation({
-    mutationFn: (id: string) => reject({ data: { id } }),
+    mutationFn: (id: string) => rejectAgentAction(id),
     onSuccess: () => { toast.success("Rejected"); refresh(); },
     onError: (e: any) => toast.error(e?.message ?? "Reject failed"),
   });
 
   const sendTest = useMutation({
-    mutationFn: () =>
-      propose({
-        data: {
-          source_type: "manual",
-          agent_name: "test",
-          action_type: "create_task",
-          payload: {
-            title: "Test task from Agent Inbox",
-            notes: "Generated via debug button",
-            mission_id: prompt("Paste a mission_id to attach the test task to:") ?? "",
-          } as any,
-          confidence_score: 1,
-          requires_approval: true,
+    mutationFn: () => {
+      const missionId = prompt("Paste a mission_id to attach the test task to:") ?? "";
+      return proposeAgentAction({
+        source_type: "manual",
+        agent_name: "test",
+        action_type: "create_task",
+        payload: {
+          title: "Test task from Agent Inbox",
+          notes: "Generated via debug button",
+          mission_id: missionId,
         },
-      }),
+        confidence_score: 1,
+        requires_approval: true,
+      });
+    },
     onSuccess: () => { toast.success("Proposed"); refresh(); },
     onError: (e: any) => toast.error(e?.message ?? "Failed"),
   });
 
-  const rows = q.data ?? [];
+  const rows = Array.isArray(q.data) ? q.data : [];
 
   return (
     <div className="mx-auto max-w-5xl p-4 lg:p-6">
@@ -103,8 +99,32 @@ function AgentInbox() {
         </div>
       </div>
 
-      {q.isLoading && <p className="label-mono">loading…</p>}
-      {!q.isLoading && rows.length === 0 && (
+      {q.isLoading && (
+        <div className="space-y-2">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+      )}
+
+      {q.isError && !q.isLoading && (
+        <Card className="border-red-500/30 bg-red-500/5 p-4">
+          <div className="flex items-start gap-2">
+            <AlertTriangle className="mt-0.5 h-4 w-4 text-red-400" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-300">No pude cargar el inbox</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {(q.error as any)?.message ?? "Error desconocido"}
+              </p>
+              <Button size="sm" variant="outline" className="mt-2" onClick={refresh}>
+                Reintentar
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {!q.isLoading && !q.isError && rows.length === 0 && (
         <Card className="p-6 text-center">
           <p className="label-mono mb-2">no actions</p>
           <p className="text-sm text-muted-foreground">
