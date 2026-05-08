@@ -60,6 +60,7 @@ export type Database = {
           deleted_by: string | null
           error_message: string | null
           executed_at: string | null
+          executed_by: string | null
           group_key: string | null
           id: string
           idempotency_key: string | null
@@ -85,6 +86,7 @@ export type Database = {
           deleted_by?: string | null
           error_message?: string | null
           executed_at?: string | null
+          executed_by?: string | null
           group_key?: string | null
           id?: string
           idempotency_key?: string | null
@@ -110,6 +112,7 @@ export type Database = {
           deleted_by?: string | null
           error_message?: string | null
           executed_at?: string | null
+          executed_by?: string | null
           group_key?: string | null
           id?: string
           idempotency_key?: string | null
@@ -469,6 +472,7 @@ export type Database = {
       }
       missions: {
         Row: {
+          agent_action_id: string | null
           area_id: string | null
           code: string | null
           completed_at: string | null
@@ -490,6 +494,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          agent_action_id?: string | null
           area_id?: string | null
           code?: string | null
           completed_at?: string | null
@@ -511,6 +516,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          agent_action_id?: string | null
           area_id?: string | null
           code?: string | null
           completed_at?: string | null
@@ -532,6 +538,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "missions_agent_action_id_fkey"
+            columns: ["agent_action_id"]
+            isOneToOne: false
+            referencedRelation: "agent_actions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "missions_area_id_fkey"
             columns: ["area_id"]
@@ -806,6 +819,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          agent_action_id: string | null
           completed_at: string | null
           created_at: string
           created_by: string | null
@@ -826,6 +840,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          agent_action_id?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -846,6 +861,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          agent_action_id?: string | null
           completed_at?: string | null
           created_at?: string
           created_by?: string | null
@@ -866,6 +882,13 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_agent_action_id_fkey"
+            columns: ["agent_action_id"]
+            isOneToOne: false
+            referencedRelation: "agent_actions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_mission_id_fkey"
             columns: ["mission_id"]
