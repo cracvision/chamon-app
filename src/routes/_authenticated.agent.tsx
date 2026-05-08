@@ -120,7 +120,7 @@ function AgentInbox() {
           <Button size="sm" variant="outline" onClick={refresh}>
             <RefreshCw className="mr-1 h-3 w-3" /> refresh
           </Button>
-          <Button size="sm" variant="ghost" onClick={() => sendTest.mutate()}>
+          <Button size="sm" variant="ghost" onClick={openTest}>
             + test action
           </Button>
         </div>
