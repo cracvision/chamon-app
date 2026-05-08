@@ -197,8 +197,8 @@ export const executeAgentAction = createServerFn({ method: "POST" })
           action_type: action.action_type,
           confidence: action.confidence_score,
           result,
-        },
-      });
+        } as any,
+      } as any);
       return { ok: true, result };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
