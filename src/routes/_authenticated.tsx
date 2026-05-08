@@ -38,6 +38,7 @@ function AuthLayout() {
     { to: "/achievements", label: t("nav.achievements"), icon: Trophy },
     { to: "/calendar", label: t("nav.calendar"), icon: Calendar },
     { to: "/contacts", label: t("nav.contacts"), icon: Users },
+    { to: "/agent", label: "Agent", icon: Bot },
     { to: "/settings", label: t("nav.settings"), icon: Settings },
   ];
 
