@@ -225,6 +225,58 @@ function AgentInbox() {
           </Card>
         ))}
       </div>
+
+      <Dialog open={testOpen} onOpenChange={setTestOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Test action: create_task</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-xs text-muted-foreground">
+              Pick an active mission to attach the test task to. The action will be proposed
+              with confidence 1 and require approval.
+            </p>
+            {missionsQ.isLoading && <Skeleton className="h-9 w-full" />}
+            {!missionsQ.isLoading && (missionsQ.data?.length ?? 0) === 0 && (
+              <Card className="p-3 text-sm">
+                No active missions. <Link to="/dashboard" className="underline">Create one →</Link>
+              </Card>
+            )}
+            {!missionsQ.isLoading && (missionsQ.data?.length ?? 0) > 0 && (
+              <Select
+                value={selectedMission || (missionsQ.data?.[0]?.id ?? "")}
+                onValueChange={setSelectedMission}
+              >
+                <SelectTrigger><SelectValue placeholder="Select a mission" /></SelectTrigger>
+                <SelectContent>
+                  {(missionsQ.data ?? []).map((m: any) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      {m.code ? `[${m.code}] ` : ""}{m.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTestOpen(false)}>Cancel</Button>
+            <Button
+              disabled={
+                sendTest.isPending ||
+                (missionsQ.data?.length ?? 0) === 0 ||
+                missionsQ.isLoading
+              }
+              onClick={() => {
+                const id = selectedMission || missionsQ.data?.[0]?.id;
+                if (!id) return;
+                sendTest.mutate(id);
+              }}
+            >
+              Propose
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
