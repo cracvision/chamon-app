@@ -55,6 +55,9 @@ export type Database = {
           approved_by: string | null
           confidence_score: number | null
           created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           error_message: string | null
           executed_at: string | null
           group_key: string | null
@@ -67,6 +70,7 @@ export type Database = {
           source_type: string
           status: string
           updated_at: string
+          updated_by: string | null
           user_id: string
         }
         Insert: {
@@ -76,6 +80,9 @@ export type Database = {
           approved_by?: string | null
           confidence_score?: number | null
           created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           error_message?: string | null
           executed_at?: string | null
           group_key?: string | null
@@ -88,6 +95,7 @@ export type Database = {
           source_type: string
           status?: string
           updated_at?: string
+          updated_by?: string | null
           user_id: string
         }
         Update: {
@@ -97,6 +105,9 @@ export type Database = {
           approved_by?: string | null
           confidence_score?: number | null
           created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           error_message?: string | null
           executed_at?: string | null
           group_key?: string | null
@@ -109,6 +120,7 @@ export type Database = {
           source_type?: string
           status?: string
           updated_at?: string
+          updated_by?: string | null
           user_id?: string
         }
         Relationships: []
@@ -163,6 +175,9 @@ export type Database = {
           brand: string | null
           category: string | null
           created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
           model: string | null
           name: string
@@ -171,6 +186,7 @@ export type Database = {
           purchase_date: string | null
           serial_number: string | null
           updated_at: string
+          updated_by: string | null
           user_id: string
           warranty_expires_at: string | null
         }
@@ -178,6 +194,9 @@ export type Database = {
           brand?: string | null
           category?: string | null
           created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           model?: string | null
           name: string
@@ -186,6 +205,7 @@ export type Database = {
           purchase_date?: string | null
           serial_number?: string | null
           updated_at?: string
+          updated_by?: string | null
           user_id: string
           warranty_expires_at?: string | null
         }
@@ -193,6 +213,9 @@ export type Database = {
           brand?: string | null
           category?: string | null
           created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           model?: string | null
           name?: string
@@ -201,6 +224,7 @@ export type Database = {
           purchase_date?: string | null
           serial_number?: string | null
           updated_at?: string
+          updated_by?: string | null
           user_id?: string
           warranty_expires_at?: string | null
         }
@@ -334,6 +358,9 @@ export type Database = {
           classification: string | null
           confidence_score: number | null
           created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           error_message: string | null
           extracted_payload: Json | null
           from_address: string | null
@@ -345,12 +372,17 @@ export type Database = {
           received_at: string | null
           reservation_id: string | null
           subject: string | null
+          updated_at: string
+          updated_by: string | null
           user_id: string
         }
         Insert: {
           classification?: string | null
           confidence_score?: number | null
           created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           error_message?: string | null
           extracted_payload?: Json | null
           from_address?: string | null
@@ -362,12 +394,17 @@ export type Database = {
           received_at?: string | null
           reservation_id?: string | null
           subject?: string | null
+          updated_at?: string
+          updated_by?: string | null
           user_id: string
         }
         Update: {
           classification?: string | null
           confidence_score?: number | null
           created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           error_message?: string | null
           extracted_payload?: Json | null
           from_address?: string | null
@@ -379,6 +416,8 @@ export type Database = {
           received_at?: string | null
           reservation_id?: string | null
           subject?: string | null
+          updated_at?: string
+          updated_by?: string | null
           user_id?: string
         }
         Relationships: [
@@ -582,36 +621,48 @@ export type Database = {
           address: string | null
           code: string | null
           created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
           is_active: boolean
           name: string
           notes: string | null
           timezone: string
           updated_at: string
+          updated_by: string | null
           user_id: string
         }
         Insert: {
           address?: string | null
           code?: string | null
           created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           is_active?: boolean
           name: string
           notes?: string | null
           timezone?: string
           updated_at?: string
+          updated_by?: string | null
           user_id: string
         }
         Update: {
           address?: string | null
           code?: string | null
           created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           is_active?: boolean
           name?: string
           notes?: string | null
           timezone?: string
           updated_at?: string
+          updated_by?: string | null
           user_id?: string
         }
         Relationships: []
@@ -627,6 +678,9 @@ export type Database = {
           confidence_score: number | null
           confirmation_code: string | null
           created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           guest_email: string | null
           guest_name: string | null
           guest_phone: string | null
@@ -641,6 +695,7 @@ export type Database = {
           status: string
           taxes_or_fees: number | null
           updated_at: string
+          updated_by: string | null
           user_id: string
         }
         Insert: {
@@ -653,6 +708,9 @@ export type Database = {
           confidence_score?: number | null
           confirmation_code?: string | null
           created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           guest_email?: string | null
           guest_name?: string | null
           guest_phone?: string | null
@@ -667,6 +725,7 @@ export type Database = {
           status?: string
           taxes_or_fees?: number | null
           updated_at?: string
+          updated_by?: string | null
           user_id: string
         }
         Update: {
@@ -679,6 +738,9 @@ export type Database = {
           confidence_score?: number | null
           confirmation_code?: string | null
           created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           guest_email?: string | null
           guest_name?: string | null
           guest_phone?: string | null
@@ -693,6 +755,7 @@ export type Database = {
           status?: string
           taxes_or_fees?: number | null
           updated_at?: string
+          updated_by?: string | null
           user_id?: string
         }
         Relationships: [
@@ -893,6 +956,9 @@ export type Database = {
         Row: {
           category: string | null
           created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           email: string | null
           id: string
           last_service_date: string | null
@@ -902,11 +968,15 @@ export type Database = {
           property_id: string | null
           rating: number | null
           updated_at: string
+          updated_by: string | null
           user_id: string
         }
         Insert: {
           category?: string | null
           created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
           id?: string
           last_service_date?: string | null
@@ -916,11 +986,15 @@ export type Database = {
           property_id?: string | null
           rating?: number | null
           updated_at?: string
+          updated_by?: string | null
           user_id: string
         }
         Update: {
           category?: string | null
           created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
           id?: string
           last_service_date?: string | null
@@ -930,6 +1004,7 @@ export type Database = {
           property_id?: string | null
           rating?: number | null
           updated_at?: string
+          updated_by?: string | null
           user_id?: string
         }
         Relationships: [
