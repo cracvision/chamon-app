@@ -63,10 +63,18 @@ function AgentInbox() {
     onError: (e: any) => toast.error(e?.message ?? "Reject failed"),
   });
 
+  const [testOpen, setTestOpen] = useState(false);
+  const [selectedMission, setSelectedMission] = useState<string>("");
+
+  const missionsQ = useQuery({
+    queryKey: ["agent_inbox_active_missions"],
+    queryFn: listActiveMissions,
+    enabled: testOpen,
+  });
+
   const sendTest = useMutation({
-    mutationFn: () => {
-      const missionId = prompt("Paste a mission_id to attach the test task to:") ?? "";
-      return proposeAgentAction({
+    mutationFn: (missionId: string) =>
+      proposeAgentAction({
         source_type: "manual",
         agent_name: "test",
         action_type: "create_task",
@@ -77,11 +85,15 @@ function AgentInbox() {
         },
         confidence_score: 1,
         requires_approval: true,
-      });
-    },
-    onSuccess: () => { toast.success("Proposed"); refresh(); },
+      }),
+    onSuccess: () => { toast.success("Proposed"); setTestOpen(false); refresh(); },
     onError: (e: any) => toast.error(e?.message ?? "Failed"),
   });
+
+  const openTest = () => {
+    setSelectedMission("");
+    setTestOpen(true);
+  };
 
   const rows = Array.isArray(q.data) ? q.data : [];
 
