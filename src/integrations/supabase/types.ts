@@ -752,6 +752,7 @@ export type Database = {
       }
       reservations: {
         Row: {
+          agent_action_id: string | null
           calendar_event_id: string | null
           check_in_date: string | null
           check_in_time: string | null
@@ -782,6 +783,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          agent_action_id?: string | null
           calendar_event_id?: string | null
           check_in_date?: string | null
           check_in_time?: string | null
@@ -812,6 +814,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          agent_action_id?: string | null
           calendar_event_id?: string | null
           check_in_date?: string | null
           check_in_time?: string | null
