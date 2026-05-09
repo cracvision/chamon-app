@@ -694,6 +694,7 @@ export type Database = {
           code: string | null
           created_at: string
           created_by: string | null
+          default_area_id: string | null
           deleted_at: string | null
           deleted_by: string | null
           id: string
@@ -710,6 +711,7 @@ export type Database = {
           code?: string | null
           created_at?: string
           created_by?: string | null
+          default_area_id?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
           id?: string
@@ -726,6 +728,7 @@ export type Database = {
           code?: string | null
           created_at?: string
           created_by?: string | null
+          default_area_id?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
           id?: string
@@ -737,7 +740,15 @@ export type Database = {
           updated_by?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "properties_default_area_id_fkey"
+            columns: ["default_area_id"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reservations: {
         Row: {
