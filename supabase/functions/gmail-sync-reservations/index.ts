@@ -135,7 +135,18 @@ function findPart(part: MessagePart, mime: string): MessagePart | null {
 
 // ---------- Sibling function calls ----------
 
-async function callExtract(emailContent: string, sourceEmailId: string): Promise<{
+type ReservationEventType = "new" | "cancel" | "update";
+
+function classifyEmail(subject: string, snippet: string): ReservationEventType {
+  const s = `${subject} ${snippet}`.toLowerCase();
+  if (/cancel(?:l?ed|lation|aci[oó]n|ada|ado)/.test(s)) return "cancel";
+  if (/(itinerary updated|dates? changed|reservation updated|change to your|updated reservation|reserva actualizada|cambio en tu reserva|fechas? cambiada)/.test(s)) {
+    return "update";
+  }
+  return "new";
+}
+
+async function callExtract(emailContent: string, sourceEmailId: string, eventType: ReservationEventType): Promise<{
   ok: boolean;
   status: number;
   body: any;
@@ -150,6 +161,7 @@ async function callExtract(emailContent: string, sourceEmailId: string): Promise
       email_content: emailContent,
       source: "airbnb",
       source_email_id: sourceEmailId,
+      event_type: eventType,
     }),
   });
   const text = await res.text();
@@ -158,7 +170,7 @@ async function callExtract(emailContent: string, sourceEmailId: string): Promise
   return { ok: res.ok, status: res.status, body: parsed };
 }
 
-async function callPropose(extractedPayload: any, confidence: number, lowConf: boolean, sourceEmailId: string): Promise<{
+async function callPropose(extractedPayload: any, confidence: number, lowConf: boolean, sourceEmailId: string, eventType: ReservationEventType, cancelledBy: string | null): Promise<{
   ok: boolean;
   status: number;
   body: any;
@@ -175,6 +187,8 @@ async function callPropose(extractedPayload: any, confidence: number, lowConf: b
       low_confidence: lowConf,
       source_email_id: sourceEmailId,
       property_id: TARGET_PROPERTY_ID,
+      event_type: eventType,
+      cancelled_by: cancelledBy,
     }),
   });
   const text = await res.text();
