@@ -1,0 +1,32 @@
+-- gmail-sync-reservations cron — *NOT ACTIVATED YET*
+--
+-- Antes de activar:
+--   1. Validar manualmente las 3 funciones con los curls de Sprint 2.2.
+--   2. Confirmar que la query de Gmail (newer_than:30d, subject "Reservation
+--      confirmed"/"Reserva confirmada") trae lo esperado.
+--   3. Decidir si querés que corra cada 10 min o más espaciado.
+--
+-- Para activar (correr el bloque entero):
+--
+-- SELECT cron.schedule(
+--   'gmail-sync-reservations-job',
+--   '*/10 * * * *',
+--   $$
+--   SELECT net.http_post(
+--     url := 'https://yvfkkdvhizjdpouoewch.supabase.co/functions/v1/gmail-sync-reservations',
+--     headers := jsonb_build_object(
+--       'Content-Type', 'application/json',
+--       'Authorization', 'Bearer ' || (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'CHAMON_ELEVENLABS_BEARER')
+--     ),
+--     body := '{}'::jsonb
+--   ) AS request_id;
+--   $$
+-- );
+--
+-- Para desactivar:
+-- SELECT cron.unschedule('gmail-sync-reservations-job');
+--
+-- Para ver historial:
+-- SELECT * FROM cron.job_run_details
+--   WHERE jobid = (SELECT jobid FROM cron.job WHERE jobname = 'gmail-sync-reservations-job')
+--   ORDER BY start_time DESC LIMIT 20;
