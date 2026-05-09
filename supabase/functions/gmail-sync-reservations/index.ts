@@ -135,7 +135,18 @@ function findPart(part: MessagePart, mime: string): MessagePart | null {
 
 // ---------- Sibling function calls ----------
 
-async function callExtract(emailContent: string, sourceEmailId: string): Promise<{
+type ReservationEventType = "new" | "cancel" | "update";
+
+function classifyEmail(subject: string, snippet: string): ReservationEventType {
+  const s = `${subject} ${snippet}`.toLowerCase();
+  if (/cancel(?:l?ed|lation|aci[oó]n|ada|ado)/.test(s)) return "cancel";
+  if (/(itinerary updated|dates? changed|reservation updated|change to your|updated reservation|reserva actualizada|cambio en tu reserva|fechas? cambiada)/.test(s)) {
+    return "update";
+  }
+  return "new";
+}
+
+async function callExtract(emailContent: string, sourceEmailId: string, eventType: ReservationEventType): Promise<{
   ok: boolean;
   status: number;
   body: any;
@@ -150,6 +161,7 @@ async function callExtract(emailContent: string, sourceEmailId: string): Promise
       email_content: emailContent,
       source: "airbnb",
       source_email_id: sourceEmailId,
+      event_type: eventType,
     }),
   });
   const text = await res.text();
@@ -158,7 +170,7 @@ async function callExtract(emailContent: string, sourceEmailId: string): Promise
   return { ok: res.ok, status: res.status, body: parsed };
 }
 
-async function callPropose(extractedPayload: any, confidence: number, lowConf: boolean, sourceEmailId: string): Promise<{
+async function callPropose(extractedPayload: any, confidence: number, lowConf: boolean, sourceEmailId: string, eventType: ReservationEventType, cancelledBy: string | null): Promise<{
   ok: boolean;
   status: number;
   body: any;
@@ -175,6 +187,8 @@ async function callPropose(extractedPayload: any, confidence: number, lowConf: b
       low_confidence: lowConf,
       source_email_id: sourceEmailId,
       property_id: TARGET_PROPERTY_ID,
+      event_type: eventType,
+      cancelled_by: cancelledBy,
     }),
   });
   const text = await res.text();
@@ -216,10 +230,9 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   });
 
-  // Gmail search query
+  // Gmail search query — broadened in Sprint 2.3 to include cancel/update emails.
   const q = [
-    "from:automated@airbnb.com",
-    '(subject:"Reservation confirmed" OR subject:"Reserva confirmada")',
+    "from:(automated@airbnb.com OR express@airbnb.com OR no-reply@airbnb.com)",
     "newer_than:30d",
   ].join(" ");
   const params = new URLSearchParams({ maxResults: String(MAX_EMAILS), q });
@@ -238,7 +251,12 @@ Deno.serve(async (req) => {
     new: 0,
     proposed: 0,
     duplicates: 0,
+    skipped: 0,
     low_conf_skipped: 0,
+    cancelled: 0,
+    updated: 0,
+    orphans: 0,
+    event_type_mismatches: 0,
     errors: 0,
   };
 
@@ -264,6 +282,7 @@ Deno.serve(async (req) => {
       const subject = header(full, "Subject");
       const internal = full.internalDate ? new Date(Number(full.internalDate)).toISOString() : null;
       const bodyText = extractBody(full.payload);
+      const eventType = classifyEmail(subject, bodyText.slice(0, 500));
 
       if (!logId) {
         const { data: ins, error: insErr } = await supabase
@@ -275,7 +294,7 @@ Deno.serve(async (req) => {
             from_address: fromAddr,
             subject,
             received_at: internal,
-            classification: "reservation_candidate",
+            classification: `reservation_${eventType}`,
           })
           .select("id")
           .maybeSingle();
@@ -297,8 +316,7 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Extract
-      const ext = await callExtract(bodyText, messageId);
+      const ext = await callExtract(bodyText, messageId, eventType);
       if (!ext.ok || !ext.body?.ok) {
         await supabase.from("email_ingestion_log").update({
           processed_at: new Date().toISOString(),
@@ -311,11 +329,24 @@ Deno.serve(async (req) => {
       const confidence: number = ext.body.confidence;
       const lowConf: boolean = ext.body.low_confidence ?? (confidence < 0.5);
       const extractedPayload = ext.body.payload;
+      const llmEventType: ReservationEventType = ext.body.event_type ?? eventType;
+      const cancelledBy: string | null = ext.body.cancelled_by ?? null;
+
+      if (llmEventType !== eventType) {
+        summary.event_type_mismatches++;
+        console.warn(JSON.stringify({
+          agent: "gmail-sync-reservations",
+          gmail_message_id: messageId,
+          event_type_heuristic: eventType,
+          event_type_llm: llmEventType,
+          msg: "classification_mismatch_trusting_llm",
+        }));
+      }
 
       if (lowConf) {
         await supabase.from("email_ingestion_log").update({
           processed_at: new Date().toISOString(),
-          extracted_payload: extractedPayload,
+          extracted_payload: { ...extractedPayload, event_type: llmEventType },
           confidence_score: confidence,
           error_message: "low_confidence_skipped",
         }).eq("id", logId);
@@ -323,12 +354,11 @@ Deno.serve(async (req) => {
         continue;
       }
 
-      // Propose
-      const prop = await callPropose(extractedPayload, confidence, lowConf, messageId);
+      const prop = await callPropose(extractedPayload, confidence, lowConf, messageId, llmEventType, cancelledBy);
       if (!prop.ok || !prop.body?.ok) {
         await supabase.from("email_ingestion_log").update({
           processed_at: new Date().toISOString(),
-          extracted_payload: extractedPayload,
+          extracted_payload: { ...extractedPayload, event_type: llmEventType },
           confidence_score: confidence,
           error_message: `propose_failed_${prop.status}: ${JSON.stringify(prop.body).slice(0, 400)}`,
         }).eq("id", logId);
@@ -336,20 +366,34 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // Outcome accounting
       if (prop.body.duplicate) summary.duplicates++;
-      else summary.proposed++;
+      else if (prop.body.skipped) {
+        summary.skipped++;
+        if (prop.body.reason === "no_matching_reservation") summary.orphans++;
+      } else {
+        summary.proposed++;
+        if (llmEventType === "cancel") summary.cancelled++;
+        else if (llmEventType === "update") summary.updated++;
+      }
 
       await supabase.from("email_ingestion_log").update({
         processed_at: new Date().toISOString(),
-        extracted_payload: extractedPayload,
+        extracted_payload: { ...extractedPayload, event_type: llmEventType },
         confidence_score: confidence,
+        classification: prop.body.skipped && prop.body.reason === "no_matching_reservation"
+          ? "reservation_orphan"
+          : `reservation_${llmEventType}`,
       }).eq("id", logId);
 
       console.log(JSON.stringify({
         agent: "gmail-sync-reservations",
         gmail_message_id: messageId,
+        event_type: llmEventType,
         confidence,
-        outcome: prop.body.duplicate ? "duplicate" : "proposed",
+        outcome: prop.body.duplicate ? "duplicate"
+               : prop.body.skipped ? `skipped:${prop.body.reason}`
+               : "proposed",
         action_id: prop.body.action_id,
       }));
     } catch (e) {

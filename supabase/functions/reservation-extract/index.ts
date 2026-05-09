@@ -1,11 +1,8 @@
 // reservation-extract — manual endpoint that takes a raw email body and asks
-// Lovable AI Gateway (Gemini 2.5 Flash) to extract reservation fields.
+// Lovable AI Gateway to extract reservation fields.
 //
-// Auth: HMAC (preferred for prod) OR Bearer (CHAMON_ELEVENLABS_BEARER) for
-// quick manual testing. Same pattern as chamon-* functions.
-//
-// NOTE: property_id is NOT extracted from the email — it's assigned later
-// during the propose flow (sprint 2.2).
+// Sprint 2.3: now accepts `event_type` ('new'|'cancel'|'update') so the prompt
+// adapts and the LLM echoes back its own classification. Caller can compare.
 
 import { z } from "https://esm.sh/zod@3.23.8";
 import { CORS, jsonResponse } from "../_shared/cors.ts";
@@ -22,22 +19,28 @@ const inputSchema = z.object({
   email_content: z.string().min(20, "email_content too short"),
   source: z.enum(["airbnb", "vrbo", "booking"]),
   source_email_id: z.string().optional(),
+  event_type: z.enum(["new", "cancel", "update"]).optional().default("new"),
 });
 
 const dateString = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "must be YYYY-MM-DD");
 
+// For 'new' the schema requires full dates. For 'cancel'/'update' dates are
+// optional (cancel may have none, update may have only the changed ones).
 const extractedSchema = z.object({
   confidence: z.number().min(0).max(1),
+  event_type: z.enum(["new", "cancel", "update"]).optional(),
+  cancelled_by: z.enum(["host", "guest", "platform", "unknown"]).optional().nullable(),
+  changed_fields: z.array(z.string()).optional().nullable(),
   payload: z.object({
     source: z.enum(["airbnb", "vrbo", "booking"]),
-    confirmation_code: z.string().optional().nullable(),
+    confirmation_code: z.string().min(1, "confirmation_code required"),
     guest_name: z.string().optional().nullable(),
     guest_email: z.string().email().optional().nullable(),
     guest_phone: z.string().optional().nullable(),
-    check_in_date: dateString,
-    check_out_date: dateString,
+    check_in_date: dateString.optional().nullable(),
+    check_out_date: dateString.optional().nullable(),
     number_of_guests: z.number().int().positive().optional().nullable(),
     payout_amount: z.number().optional().nullable(),
     cleaning_fee: z.number().optional().nullable(),
@@ -46,20 +49,45 @@ const extractedSchema = z.object({
   extraction_notes: z.string().optional().nullable(),
 });
 
-const SYSTEM_PROMPT = `Sos un extractor estricto de datos de reservas de plataformas de alquiler vacacional (Airbnb, VRBO, Booking). Los emails pueden venir en inglés o español; extraés los datos sin importar el idioma.
+function systemPrompt(eventType: string): string {
+  const eventGuidance = eventType === "cancel"
+    ? `
+Este email es de tipo CANCELACIÓN. Extrae:
+- confirmation_code (OBLIGATORIO)
+- guest_name si aparece
+- check_in_date / check_out_date si aparecen (opcional)
+- cancelled_by: 'host' | 'guest' | 'platform' | 'unknown' según quién canceló
+- Resto de campos: null si no aparecen
+- 'changed_fields' irrelevante para cancel`
+    : eventType === "update"
+    ? `
+Este email es de tipo ACTUALIZACIÓN/CAMBIO. Extrae:
+- confirmation_code (OBLIGATORIO)
+- TODOS los campos que el email muestra como nuevos (especialmente check_in_date y check_out_date si cambiaron)
+- 'changed_fields': array con los nombres de los campos que el email indica que cambiaron`
+    : `
+Este email es una NUEVA RESERVA. Extrae todos los campos disponibles.
+'check_in_date' y 'check_out_date' son OBLIGATORIOS.`;
 
-Devolvés ÚNICAMENTE un objeto JSON válido con este shape exacto, sin texto adicional, sin markdown, sin comentarios:
+  return `Sos un extractor estricto de datos de reservas de plataformas de alquiler vacacional (Airbnb, VRBO, Booking). Los emails pueden venir en inglés o español.
+
+${eventGuidance}
+
+Devolvés ÚNICAMENTE un objeto JSON válido, sin markdown:
 
 {
   "confidence": <number 0..1>,
+  "event_type": "new" | "cancel" | "update",
+  "cancelled_by": "host" | "guest" | "platform" | "unknown" | null,
+  "changed_fields": [<string>] | null,
   "payload": {
     "source": "airbnb" | "vrbo" | "booking",
-    "confirmation_code": <string|null>,
+    "confirmation_code": <string>,
     "guest_name": <string|null>,
     "guest_email": <string|null>,
     "guest_phone": <string|null>,
-    "check_in_date": "YYYY-MM-DD",
-    "check_out_date": "YYYY-MM-DD",
+    "check_in_date": "YYYY-MM-DD" | null,
+    "check_out_date": "YYYY-MM-DD" | null,
     "number_of_guests": <int|null>,
     "payout_amount": <number|null>,
     "cleaning_fee": <number|null>,
@@ -69,13 +97,14 @@ Devolvés ÚNICAMENTE un objeto JSON válido con este shape exacto, sin texto ad
 }
 
 Reglas:
-- Los datos extraídos son LITERALES del email (no traduzcas nombres ni códigos).
-- 'extraction_notes' puede ser en español si hubo ambigüedades.
-- 'confidence' bajo (<0.5) si faltan campos clave (check_in_date, check_out_date, guest_name).
-- Montos como números puros (sin símbolo de moneda).
-- Si un campo opcional no está en el email, devolvelo como null.`;
+- Datos LITERALES del email.
+- 'confidence' bajo (<0.5) si falta el confirmation_code o el tipo de email es ambiguo.
+- Montos como números puros.
+- Si un campo opcional no está, devolvelo como null.
+- 'event_type' en la respuesta debe coincidir con tu lectura real del email; si discrepa con el hint del usuario, igual devolvé el que vos creés correcto.`;
+}
 
-async function callGemini(emailContent: string, source: string): Promise<{
+async function callLLM(emailContent: string, source: string, eventType: string): Promise<{
   parsed: unknown;
   raw: string;
   tokens?: unknown;
@@ -96,10 +125,10 @@ async function callGemini(emailContent: string, source: string): Promise<{
         model: MODEL,
         response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
+          { role: "system", content: systemPrompt(eventType) },
           {
             role: "user",
-            content: `Source hint: ${source}\n\n--- EMAIL CONTENT ---\n${emailContent}`,
+            content: `Source hint: ${source}\nEvent type hint: ${eventType}\n\n--- EMAIL CONTENT ---\n${emailContent}`,
           },
         ],
       }),
@@ -133,13 +162,11 @@ Deno.serve(async (req) => {
 
   const rawBody = await req.text();
 
-  // Auth
   const auth = await verifyRequest(HMAC_SECRET, BEARER_TOKEN, req.headers, rawBody);
   if (!auth.ok) {
     return jsonResponse({ ok: false, error: "unauthorized", reason: auth.error }, 401);
   }
 
-  // Parse + validate input
   let body: unknown;
   try {
     body = JSON.parse(rawBody);
@@ -159,10 +186,9 @@ Deno.serve(async (req) => {
     return jsonResponse({ ok: false, error: "missing_lovable_api_key" }, 500);
   }
 
-  // Call Gemini
   let llm: { parsed: unknown; raw: string; tokens?: unknown; durationMs: number };
   try {
-    llm = await callGemini(input.email_content, input.source);
+    llm = await callLLM(input.email_content, input.source, input.event_type);
   } catch (e: any) {
     if (e.name === "AbortError") {
       console.log(JSON.stringify({
@@ -175,25 +201,14 @@ Deno.serve(async (req) => {
     if (e.status === 429) return jsonResponse({ ok: false, error: "rate_limited" }, 429);
     if (e.status === 402) return jsonResponse({ ok: false, error: "credits_exhausted" }, 402);
     if (e.message === "llm_returned_non_json") {
-      console.log(JSON.stringify({
-        agent: "reservation-extract",
-        source_email_id: input.source_email_id,
-        outcome: "non_json",
-      }));
       return jsonResponse({ ok: false, error: "llm_returned_non_json", raw: e.raw }, 422);
     }
     console.error("reservation-extract gateway error", e?.message, e?.body);
     return jsonResponse({ ok: false, error: "gateway_error", detail: e?.message }, 502);
   }
 
-  // Validate LLM output
   const parsed = extractedSchema.safeParse(llm.parsed);
   if (!parsed.success) {
-    console.log(JSON.stringify({
-      agent: "reservation-extract",
-      source_email_id: input.source_email_id,
-      outcome: "schema_violation",
-    }));
     return jsonResponse(
       {
         ok: false,
@@ -206,7 +221,19 @@ Deno.serve(async (req) => {
   }
 
   const data = parsed.data;
-  // Inject source_email_ids if we received one
+  const llmEventType = data.event_type ?? input.event_type;
+  const eventTypeMismatch = llmEventType !== input.event_type;
+
+  // Per-event-type sanity: 'new' must have both dates.
+  if (llmEventType === "new" && (!data.payload.check_in_date || !data.payload.check_out_date)) {
+    return jsonResponse({
+      ok: false,
+      error: "invalid_llm_output",
+      detail: "new event requires check_in_date + check_out_date",
+      raw: data,
+    }, 422);
+  }
+
   const finalPayload: Record<string, unknown> = { ...data.payload };
   if (input.source_email_id) {
     finalPayload.source_email_ids = [input.source_email_id];
@@ -221,6 +248,9 @@ Deno.serve(async (req) => {
     llm_duration_ms: llm.durationMs,
     confidence: data.confidence,
     low_confidence: lowConfidence,
+    event_type_hint: input.event_type,
+    event_type_llm: llmEventType,
+    event_type_mismatch: eventTypeMismatch,
     outcome: "ok",
   }));
 
@@ -228,6 +258,11 @@ Deno.serve(async (req) => {
     ok: true,
     confidence: data.confidence,
     low_confidence: lowConfidence,
+    event_type: llmEventType,
+    event_type_hint: input.event_type,
+    event_type_mismatch: eventTypeMismatch,
+    cancelled_by: data.cancelled_by ?? null,
+    changed_fields: data.changed_fields ?? null,
     payload: finalPayload,
     extraction_notes: data.extraction_notes ?? null,
     model_used: MODEL,
