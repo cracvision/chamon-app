@@ -470,6 +470,65 @@ export type Database = {
         }
         Relationships: []
       }
+      mission_templates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          default_area_id: string | null
+          default_priority: string
+          default_reward_text: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          description: string | null
+          id: string
+          name: string
+          task_offsets: Json
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          default_area_id?: string | null
+          default_priority?: string
+          default_reward_text?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          task_offsets?: Json
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          default_area_id?: string | null
+          default_priority?: string
+          default_reward_text?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          task_offsets?: Json
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mission_templates_default_area_id_fkey"
+            columns: ["default_area_id"]
+            isOneToOne: false
+            referencedRelation: "areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       missions: {
         Row: {
           agent_action_id: string | null
@@ -1115,6 +1174,10 @@ export type Database = {
       }
       evaluate_achievements: { Args: { _user_id: string }; Returns: undefined }
       execute_agent_action: { Args: { _action_id: string }; Returns: Json }
+      instantiate_template: {
+        Args: { _context: Json; _template_id: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
