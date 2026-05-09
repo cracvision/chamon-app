@@ -70,11 +70,42 @@ export const updateTaskPayload = z
     { message: "update_task requires at least one field besides task_id" },
   );
 
+export const cancelReservationPayload = z.object({
+  reservation_id: z.string().uuid(),
+  cancelled_by: z.enum(["host", "guest", "platform", "unknown"]).default("unknown"),
+  cancellation_email_id: z.string().optional().nullable(),
+  confirmation_code: z.string().optional(),
+});
+
+const UPDATE_RESERVATION_FIELDS = [
+  "check_in_date", "check_out_date", "check_in_time", "check_out_time",
+  "guest_name", "guest_email", "guest_phone", "number_of_guests",
+  "payout_amount", "cleaning_fee", "taxes_or_fees",
+] as const;
+
+export const updateReservationPayload = z.object({
+  reservation_id: z.string().uuid(),
+  updates: z
+    .record(z.string(), z.union([z.string(), z.number(), z.boolean()]))
+    .refine(
+      (u) => Object.keys(u).length > 0,
+      { message: "updates must be non-empty" },
+    )
+    .refine(
+      (u) => Object.keys(u).every((k) => (UPDATE_RESERVATION_FIELDS as readonly string[]).includes(k)),
+      { message: `updates may only contain: ${UPDATE_RESERVATION_FIELDS.join(", ")}` },
+    ),
+  recalc_task_dates: z.boolean(),
+  confirmation_code: z.string().optional(),
+});
+
 export const PAYLOAD_SCHEMAS = {
   create_task: createTaskPayload,
   create_mission: createMissionPayload,
   create_reservation: createReservationPayload,
   update_task: updateTaskPayload,
+  cancel_reservation: cancelReservationPayload,
+  update_reservation: updateReservationPayload,
 } as const;
 
 export type AgentActionType = keyof typeof PAYLOAD_SCHEMAS;
