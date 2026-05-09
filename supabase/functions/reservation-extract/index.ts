@@ -16,7 +16,7 @@ const BEARER_TOKEN = Deno.env.get("CHAMON_ELEVENLABS_BEARER") ?? undefined;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") ?? "";
 const MODEL = "openai/gpt-5-mini";
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const TIMEOUT_MS = 15_000;
+const TIMEOUT_MS = 300_000;
 
 const inputSchema = z.object({
   email_content: z.string().min(20, "email_content too short"),
@@ -79,9 +79,11 @@ async function callGemini(emailContent: string, source: string): Promise<{
   parsed: unknown;
   raw: string;
   tokens?: unknown;
+  durationMs: number;
 }> {
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const llmStart = Date.now();
   try {
     const res = await fetch(GATEWAY_URL, {
       method: "POST",
@@ -119,7 +121,7 @@ async function callGemini(emailContent: string, source: string): Promise<{
       e.raw = raw;
       throw e;
     }
-    return { parsed, raw, tokens: json?.usage };
+    return { parsed, raw, tokens: json?.usage, durationMs: Date.now() - llmStart };
   } finally {
     clearTimeout(t);
   }
@@ -158,7 +160,7 @@ Deno.serve(async (req) => {
   }
 
   // Call Gemini
-  let llm: { parsed: unknown; raw: string; tokens?: unknown };
+  let llm: { parsed: unknown; raw: string; tokens?: unknown; durationMs: number };
   try {
     llm = await callGemini(input.email_content, input.source);
   } catch (e: any) {
@@ -215,6 +217,8 @@ Deno.serve(async (req) => {
   console.log(JSON.stringify({
     agent: "reservation-extract",
     source_email_id: input.source_email_id,
+    model_used: MODEL,
+    llm_duration_ms: llm.durationMs,
     confidence: data.confidence,
     low_confidence: lowConfidence,
     outcome: "ok",
@@ -228,5 +232,6 @@ Deno.serve(async (req) => {
     extraction_notes: data.extraction_notes ?? null,
     model_used: MODEL,
     tokens_used: llm.tokens ?? null,
+    llm_duration_ms: llm.durationMs,
   });
 });
