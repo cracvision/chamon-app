@@ -907,6 +907,8 @@ export type Database = {
           notes: string | null
           sort_order: number
           status: string
+          template_task_offset_anchor: string | null
+          template_task_offset_days: number | null
           title: string
           updated_at: string
           updated_by: string | null
@@ -928,6 +930,8 @@ export type Database = {
           notes?: string | null
           sort_order?: number
           status?: string
+          template_task_offset_anchor?: string | null
+          template_task_offset_days?: number | null
           title: string
           updated_at?: string
           updated_by?: string | null
@@ -949,6 +953,8 @@ export type Database = {
           notes?: string | null
           sort_order?: number
           status?: string
+          template_task_offset_anchor?: string | null
+          template_task_offset_days?: number | null
           title?: string
           updated_at?: string
           updated_by?: string | null
