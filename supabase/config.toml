@@ -17,3 +17,9 @@ verify_jwt = false
 
 [functions.reservation-extract]
 verify_jwt = false
+
+[functions.reservation-propose]
+verify_jwt = false
+
+[functions.gmail-sync-reservations]
+verify_jwt = false
