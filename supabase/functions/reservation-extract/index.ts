@@ -16,7 +16,7 @@ const BEARER_TOKEN = Deno.env.get("CHAMON_ELEVENLABS_BEARER") ?? undefined;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") ?? "";
 const MODEL = "openai/gpt-5-mini";
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
-const TIMEOUT_MS = 300_000;
+const TIMEOUT_MS = 45_000;
 
 const inputSchema = z.object({
   email_content: z.string().min(20, "email_content too short"),
