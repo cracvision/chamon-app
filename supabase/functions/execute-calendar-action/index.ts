@@ -182,6 +182,11 @@ Deno.serve(async (req) => {
       return jsonResponse({ ok: false, error: "reservation_not_found_for_calendar" }, 422);
     }
     reservationId = resolved as string;
+    // Persist resolved id into the action payload so finalize_calendar_action can update reservations.calendar_event_id.
+    await supabase
+      .from("agent_actions")
+      .update({ payload: { ...payload, reservation_id: reservationId } })
+      .eq("id", actionId);
   }
 
   // 2) Load reservation (+ property)
