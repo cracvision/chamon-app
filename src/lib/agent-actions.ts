@@ -99,6 +99,30 @@ export const updateReservationPayload = z.object({
   confirmation_code: z.string().optional(),
 });
 
+export const createCalendarEventPayload = z
+  .object({
+    reservation_id: z.string().uuid().optional(),
+    pending_reservation_confirmation_code: z.string().optional(),
+    pending_check_in_date: dateString.optional(),
+    confirmation_code: z.string().optional(),
+  })
+  .refine(
+    (p) =>
+      !!p.reservation_id ||
+      (!!p.pending_reservation_confirmation_code && !!p.pending_check_in_date),
+    { message: "create_calendar_event requires reservation_id OR pending refs" },
+  );
+
+export const updateCalendarEventPayload = z.object({
+  reservation_id: z.string().uuid(),
+  confirmation_code: z.string().optional(),
+});
+
+export const deleteCalendarEventPayload = z.object({
+  reservation_id: z.string().uuid(),
+  confirmation_code: z.string().optional(),
+});
+
 export const PAYLOAD_SCHEMAS = {
   create_task: createTaskPayload,
   create_mission: createMissionPayload,
@@ -106,6 +130,9 @@ export const PAYLOAD_SCHEMAS = {
   update_task: updateTaskPayload,
   cancel_reservation: cancelReservationPayload,
   update_reservation: updateReservationPayload,
+  create_calendar_event: createCalendarEventPayload,
+  update_calendar_event: updateCalendarEventPayload,
+  delete_calendar_event: deleteCalendarEventPayload,
 } as const;
 
 export type AgentActionType = keyof typeof PAYLOAD_SCHEMAS;
@@ -203,7 +230,41 @@ export async function rejectAgentAction(id: string) {
   return { ok: true };
 }
 
+const CALENDAR_ACTION_TYPES = new Set([
+  "create_calendar_event",
+  "update_calendar_event",
+  "delete_calendar_event",
+]);
+
 export async function executeAgentAction(id: string) {
+  // Need action_type to know whether to dispatch to calendar edge fn vs. RPC.
+  const { data: action, error: lookupErr } = await supabase
+    .from("agent_actions")
+    .select("action_type")
+    .eq("id", id)
+    .maybeSingle();
+  if (lookupErr || !action) {
+    const err = lookupErr ?? new Error("action_not_found");
+    console.error("[agent-actions] lookup before execute failed", { id, err });
+    throw err;
+  }
+
+  if (CALENDAR_ACTION_TYPES.has(action.action_type)) {
+    const { data, error } = await supabase.functions.invoke("execute-calendar-action", {
+      body: { action_id: id },
+    });
+    if (error) {
+      console.error("[agent-actions] calendar execute failed", { id, error });
+      await supabase
+        .from("agent_actions")
+        .update({ status: "failed", error_message: error.message })
+        .eq("id", id)
+        .eq("status", "proposed");
+      throw error;
+    }
+    return data as { ok: boolean; result?: Json; already?: boolean; duplicate?: boolean };
+  }
+
   const { data, error } = await supabase.rpc("execute_agent_action" as any, {
     _action_id: id,
   });
