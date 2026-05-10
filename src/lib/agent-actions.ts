@@ -230,7 +230,41 @@ export async function rejectAgentAction(id: string) {
   return { ok: true };
 }
 
+const CALENDAR_ACTION_TYPES = new Set([
+  "create_calendar_event",
+  "update_calendar_event",
+  "delete_calendar_event",
+]);
+
 export async function executeAgentAction(id: string) {
+  // Need action_type to know whether to dispatch to calendar edge fn vs. RPC.
+  const { data: action, error: lookupErr } = await supabase
+    .from("agent_actions")
+    .select("action_type")
+    .eq("id", id)
+    .maybeSingle();
+  if (lookupErr || !action) {
+    const err = lookupErr ?? new Error("action_not_found");
+    console.error("[agent-actions] lookup before execute failed", { id, err });
+    throw err;
+  }
+
+  if (CALENDAR_ACTION_TYPES.has(action.action_type)) {
+    const { data, error } = await supabase.functions.invoke("execute-calendar-action", {
+      body: { action_id: id },
+    });
+    if (error) {
+      console.error("[agent-actions] calendar execute failed", { id, error });
+      await supabase
+        .from("agent_actions")
+        .update({ status: "failed", error_message: error.message })
+        .eq("id", id)
+        .eq("status", "proposed");
+      throw error;
+    }
+    return data as { ok: boolean; result?: Json; already?: boolean; duplicate?: boolean };
+  }
+
   const { data, error } = await supabase.rpc("execute_agent_action" as any, {
     _action_id: id,
   });
