@@ -162,68 +162,38 @@ function AgentInbox() {
       )}
 
       <div className="space-y-2">
-        {rows.map((r: any) => (
-          <Card key={r.id} className="p-3">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
-                <div className="mb-1 flex flex-wrap items-center gap-2">
-                  <Badge variant="outline" className={STATUS_COLORS[r.status] ?? ""}>
-                    {r.status}
-                  </Badge>
-                  <span className="font-mono text-xs text-foreground">{r.action_type}</span>
-                  {r.agent_name && (
-                    <span className="label-mono">via {r.agent_name}</span>
-                  )}
-                  {typeof r.confidence_score === "number" && (
-                    <span className="label-mono">
-                      conf {(r.confidence_score * 100).toFixed(0)}%
-                    </span>
-                  )}
-                </div>
-                <pre className="overflow-x-auto rounded bg-muted/50 p-2 text-[11px] leading-tight text-muted-foreground">
-{JSON.stringify(r.payload, null, 2)}
-                </pre>
-                {r.error_message && (
-                  <p className="mt-1 text-xs text-red-400">⚠ {r.error_message}</p>
-                )}
-                {r.result && (
-                  <p className="mt-1 font-mono text-[11px] text-emerald-400">
-                    → {JSON.stringify(r.result)}
-                  </p>
-                )}
-                <p className="mt-1 label-mono">
-                  {new Date(r.created_at).toLocaleString()} · {r.source_type}
-                  {r.group_key ? ` · group ${r.group_key.slice(0, 12)}` : ""}
-                </p>
-              </div>
-              <div className="flex shrink-0 flex-col gap-1">
-                {r.status === "proposed" && (
-                  <>
-                    <Button
-                      size="sm"
-                      onClick={() => exec.mutate(r.id)}
-                      disabled={exec.isPending}
-                      className="bg-emerald-600 hover:bg-emerald-700"
-                    >
-                      <Play className="mr-1 h-3 w-3" /> execute
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => rej.mutate(r.id)}
-                      disabled={rej.isPending}
-                    >
-                      <XCircle className="mr-1 h-3 w-3" /> reject
-                    </Button>
-                  </>
-                )}
-                {r.status === "executed" && (
-                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                )}
-              </div>
-            </div>
-          </Card>
-        ))}
+        {(() => {
+          const groups = new Map<string, any[]>();
+          const singles: any[] = [];
+          for (const r of rows) {
+            if (r.group_key) {
+              if (!groups.has(r.group_key)) groups.set(r.group_key, []);
+              groups.get(r.group_key)!.push(r);
+            } else {
+              singles.push(r);
+            }
+          }
+          // Render groups (>=2 in same group_key) and singles intermixed by most-recent created_at.
+          type Item = { sortAt: string; node: React.ReactNode; key: string };
+          const items: Item[] = [];
+          for (const [gk, list] of groups) {
+            if (list.length >= 2) {
+              const newest = list.reduce((a, b) => (a.created_at > b.created_at ? a : b)).created_at;
+              items.push({
+                sortAt: newest,
+                key: `g:${gk}`,
+                node: <ProposalGroup actions={list as any} />,
+              });
+            } else {
+              singles.push(...list);
+            }
+          }
+          for (const r of singles) {
+            items.push({ sortAt: r.created_at, key: r.id, node: <SingleActionCard action={r} onExec={() => exec.mutate(r.id)} onReject={() => rej.mutate(r.id)} execPending={exec.isPending} rejectPending={rej.isPending} /> });
+          }
+          items.sort((a, b) => b.sortAt.localeCompare(a.sortAt));
+          return items.map((it) => <div key={it.key}>{it.node}</div>);
+        })()}
       </div>
 
       <Dialog open={testOpen} onOpenChange={setTestOpen}>
