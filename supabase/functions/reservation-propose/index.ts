@@ -244,6 +244,7 @@ Deno.serve(async (req) => {
         confidence_score: input.confidence,
         requires_approval: true,
         idempotency_key: idempotencyKey,
+        group_key: idempotencyKey,
         status: "proposed",
       })
       .select("id")
