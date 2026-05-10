@@ -691,6 +691,8 @@ export type Database = {
       properties: {
         Row: {
           address: string | null
+          calendar_id: string | null
+          calendar_timezone: string
           code: string | null
           created_at: string
           created_by: string | null
@@ -708,6 +710,8 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          calendar_id?: string | null
+          calendar_timezone?: string
           code?: string | null
           created_at?: string
           created_by?: string | null
@@ -725,6 +729,8 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          calendar_id?: string | null
+          calendar_timezone?: string
           code?: string | null
           created_at?: string
           created_by?: string | null
@@ -1194,8 +1200,24 @@ export type Database = {
       }
       evaluate_achievements: { Args: { _user_id: string }; Returns: undefined }
       execute_agent_action: { Args: { _action_id: string }; Returns: Json }
+      finalize_calendar_action: {
+        Args: {
+          _action_id: string
+          _calendar_event_id?: string
+          _error_message?: string
+          _extra?: Json
+          _html_link?: string
+          _mode: string
+          _skipped_reason?: string
+        }
+        Returns: Json
+      }
       instantiate_template: {
         Args: { _context: Json; _template_id: string }
+        Returns: string
+      }
+      resolve_pending_reservation_id: {
+        Args: { _check_in_date: string; _confirmation_code: string }
         Returns: string
       }
     }
