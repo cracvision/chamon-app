@@ -232,7 +232,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ ok: true, skipped: true, reason: "calendar_event_already_exists", calendar_event_id: reservation.calendar_event_id, finalize: fin });
     }
 
-    const eventId = buildEventId(reservation.confirmation_code ?? "noconf", reservation.check_in_date!);
+    const eventId = await buildEventId(reservation.confirmation_code ?? "noconf", reservation.check_in_date!);
     const eventBody = buildEventBody({ ...reservation, id: reservation.id }, tz, eventId, gmailMsgId);
 
     const { status, body: respBody } = await gatewayFetch(
@@ -286,7 +286,7 @@ Deno.serve(async (req) => {
 
     if (status === 404) {
       // Event was deleted in Google externally — treat as a re-create.
-      const eventId = buildEventId(reservation.confirmation_code ?? "noconf", reservation.check_in_date!);
+      const eventId = await buildEventId(reservation.confirmation_code ?? "noconf", reservation.check_in_date!);
       const recreateBody = { ...patchBody, id: eventId };
       const { status: cStatus, body: cBody } = await gatewayFetch(
         `/calendars/${encodeURIComponent(calendarId)}/events`,
