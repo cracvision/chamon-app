@@ -28,6 +28,59 @@ import {
 } from "@/lib/agent-actions";
 import { toast } from "sonner";
 import { CheckCircle2, XCircle, Play, RefreshCw, Bot, AlertTriangle } from "lucide-react";
+import { ProposalGroup } from "@/components/agent/ProposalGroup";
+
+function SingleActionCard({
+  action: r,
+  onExec,
+  onReject,
+  execPending,
+  rejectPending,
+}: {
+  action: any;
+  onExec: () => void;
+  onReject: () => void;
+  execPending: boolean;
+  rejectPending: boolean;
+}) {
+  return (
+    <Card className="p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="mb-1 flex flex-wrap items-center gap-2">
+            <Badge variant="outline" className={STATUS_COLORS[r.status] ?? ""}>{r.status}</Badge>
+            <span className="font-mono text-xs text-foreground">{r.action_type}</span>
+            {r.agent_name && <span className="label-mono">via {r.agent_name}</span>}
+            {typeof r.confidence_score === "number" && (
+              <span className="label-mono">conf {(r.confidence_score * 100).toFixed(0)}%</span>
+            )}
+          </div>
+          <pre className="overflow-x-auto rounded bg-muted/50 p-2 text-[11px] leading-tight text-muted-foreground">
+{JSON.stringify(r.payload, null, 2)}
+          </pre>
+          {r.error_message && <p className="mt-1 text-xs text-red-400">⚠ {r.error_message}</p>}
+          {r.result && <p className="mt-1 font-mono text-[11px] text-emerald-400">→ {JSON.stringify(r.result)}</p>}
+          <p className="mt-1 label-mono">
+            {new Date(r.created_at).toLocaleString()} · {r.source_type}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-col gap-1">
+          {r.status === "proposed" && (
+            <>
+              <Button size="sm" onClick={onExec} disabled={execPending} className="bg-emerald-600 hover:bg-emerald-700">
+                <Play className="mr-1 h-3 w-3" /> execute
+              </Button>
+              <Button size="sm" variant="outline" onClick={onReject} disabled={rejectPending}>
+                <XCircle className="mr-1 h-3 w-3" /> reject
+              </Button>
+            </>
+          )}
+          {r.status === "executed" && <CheckCircle2 className="h-5 w-5 text-emerald-500" />}
+        </div>
+      </div>
+    </Card>
+  );
+}
 
 export const Route = createFileRoute("/_authenticated/agent")({
   component: AgentInbox,
