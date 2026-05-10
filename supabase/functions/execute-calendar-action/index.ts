@@ -19,10 +19,14 @@ const GATEWAY_BASE = "https://connector-gateway.lovable.dev/google_calendar/cale
 
 // ---------- Helpers ----------
 
-function buildEventId(confirmationCode: string, checkInDate: string): string {
-  const code = confirmationCode.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const date = checkInDate.replace(/-/g, "");
-  return `mc${code}${date}`;
+async function buildEventId(confirmationCode: string, checkInDate: string): Promise<string> {
+  const data = new TextEncoder().encode(`${confirmationCode}:${checkInDate}`);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashHex = Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  // Google Calendar custom event IDs must be base32hex (chars 0-9 and a-v), length 5-1024.
+  return `mc${hashHex.substring(0, 30)}`;
 }
 
 function fmtTime(t: string | null | undefined): string | null {
@@ -178,6 +182,11 @@ Deno.serve(async (req) => {
       return jsonResponse({ ok: false, error: "reservation_not_found_for_calendar" }, 422);
     }
     reservationId = resolved as string;
+    // Persist resolved id into the action payload so finalize_calendar_action can update reservations.calendar_event_id.
+    await supabase
+      .from("agent_actions")
+      .update({ payload: { ...payload, reservation_id: reservationId } })
+      .eq("id", actionId);
   }
 
   // 2) Load reservation (+ property)
@@ -228,7 +237,7 @@ Deno.serve(async (req) => {
       return jsonResponse({ ok: true, skipped: true, reason: "calendar_event_already_exists", calendar_event_id: reservation.calendar_event_id, finalize: fin });
     }
 
-    const eventId = buildEventId(reservation.confirmation_code ?? "noconf", reservation.check_in_date!);
+    const eventId = await buildEventId(reservation.confirmation_code ?? "noconf", reservation.check_in_date!);
     const eventBody = buildEventBody({ ...reservation, id: reservation.id }, tz, eventId, gmailMsgId);
 
     const { status, body: respBody } = await gatewayFetch(
@@ -282,7 +291,7 @@ Deno.serve(async (req) => {
 
     if (status === 404) {
       // Event was deleted in Google externally — treat as a re-create.
-      const eventId = buildEventId(reservation.confirmation_code ?? "noconf", reservation.check_in_date!);
+      const eventId = await buildEventId(reservation.confirmation_code ?? "noconf", reservation.check_in_date!);
       const recreateBody = { ...patchBody, id: eventId };
       const { status: cStatus, body: cBody } = await gatewayFetch(
         `/calendars/${encodeURIComponent(calendarId)}/events`,
