@@ -453,6 +453,7 @@ Deno.serve(async (req) => {
         confidence_score: input.confidence,
         requires_approval: true,
         idempotency_key: idempotencyKey,
+        group_key: idempotencyKey,
         status: "proposed",
       })
       .select("id")
@@ -476,16 +477,33 @@ Deno.serve(async (req) => {
       return jsonResponse({ ok: false, error: "insert_failed", detail: insErr.message }, 500);
     }
 
+    const calSibling = await enqueueCalendarSibling(supabase, {
+      userId,
+      sourceEmailId: input.source_email_id ?? null,
+      groupKey: idempotencyKey,
+      actionType: "update_calendar_event",
+      idempotencyKey: `${idempotencyKey}:calendar_update`,
+      payload: {
+        reservation_id: existing.id,
+        confirmation_code: r.confirmation_code,
+      },
+      confidence: input.confidence,
+    });
+
     console.log(JSON.stringify({
       agent: "reservation-propose", event_type: "update",
       confirmation_code: r.confirmation_code, action_id: inserted?.id,
       outcome: "proposed", idempotency_key: idempotencyKey,
       changed_fields: Object.keys(diff), recalc_task_dates: recalcDates,
+      calendar_sibling_action_id: calSibling.action_id,
+      calendar_sibling_duplicate: calSibling.duplicate,
     }));
     return jsonResponse({
       ok: true, duplicate: false, action_id: inserted?.id,
       idempotency_key: idempotencyKey, event_type: "update",
       changed_fields: Object.keys(diff), recalc_task_dates: recalcDates,
+      group_key: idempotencyKey,
+      calendar_sibling: calSibling,
     });
   }
 
