@@ -99,6 +99,30 @@ export const updateReservationPayload = z.object({
   confirmation_code: z.string().optional(),
 });
 
+export const createCalendarEventPayload = z
+  .object({
+    reservation_id: z.string().uuid().optional(),
+    pending_reservation_confirmation_code: z.string().optional(),
+    pending_check_in_date: dateString.optional(),
+    confirmation_code: z.string().optional(),
+  })
+  .refine(
+    (p) =>
+      !!p.reservation_id ||
+      (!!p.pending_reservation_confirmation_code && !!p.pending_check_in_date),
+    { message: "create_calendar_event requires reservation_id OR pending refs" },
+  );
+
+export const updateCalendarEventPayload = z.object({
+  reservation_id: z.string().uuid(),
+  confirmation_code: z.string().optional(),
+});
+
+export const deleteCalendarEventPayload = z.object({
+  reservation_id: z.string().uuid(),
+  confirmation_code: z.string().optional(),
+});
+
 export const PAYLOAD_SCHEMAS = {
   create_task: createTaskPayload,
   create_mission: createMissionPayload,
@@ -106,6 +130,9 @@ export const PAYLOAD_SCHEMAS = {
   update_task: updateTaskPayload,
   cancel_reservation: cancelReservationPayload,
   update_reservation: updateReservationPayload,
+  create_calendar_event: createCalendarEventPayload,
+  update_calendar_event: updateCalendarEventPayload,
+  delete_calendar_event: deleteCalendarEventPayload,
 } as const;
 
 export type AgentActionType = keyof typeof PAYLOAD_SCHEMAS;
