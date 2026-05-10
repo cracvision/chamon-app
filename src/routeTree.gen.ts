@@ -19,6 +19,7 @@ import { Route as AuthenticatedContactsRouteImport } from './routes/_authenticat
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated.calendar'
 import { Route as AuthenticatedAgentRouteImport } from './routes/_authenticated.agent'
 import { Route as AuthenticatedAchievementsRouteImport } from './routes/_authenticated.achievements'
+import { Route as AuthenticatedOperationsReservationsRouteImport } from './routes/_authenticated.operations.reservations'
 import { Route as AuthenticatedMissionsIdRouteImport } from './routes/_authenticated.missions.$id'
 
 const AuthRoute = AuthRouteImport.update({
@@ -71,6 +72,12 @@ const AuthenticatedAchievementsRoute =
     path: '/achievements',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedOperationsReservationsRoute =
+  AuthenticatedOperationsReservationsRouteImport.update({
+    id: '/operations/reservations',
+    path: '/operations/reservations',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedMissionsIdRoute = AuthenticatedMissionsIdRouteImport.update({
   id: '/missions/$id',
   path: '/missions/$id',
@@ -88,6 +95,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/today': typeof AuthenticatedTodayRoute
   '/missions/$id': typeof AuthenticatedMissionsIdRoute
+  '/operations/reservations': typeof AuthenticatedOperationsReservationsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -100,6 +108,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/today': typeof AuthenticatedTodayRoute
   '/missions/$id': typeof AuthenticatedMissionsIdRoute
+  '/operations/reservations': typeof AuthenticatedOperationsReservationsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -114,6 +123,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/today': typeof AuthenticatedTodayRoute
   '/_authenticated/missions/$id': typeof AuthenticatedMissionsIdRoute
+  '/_authenticated/operations/reservations': typeof AuthenticatedOperationsReservationsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -128,6 +138,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/today'
     | '/missions/$id'
+    | '/operations/reservations'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -140,6 +151,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/today'
     | '/missions/$id'
+    | '/operations/reservations'
   id:
     | '__root__'
     | '/'
@@ -153,6 +165,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/today'
     | '/_authenticated/missions/$id'
+    | '/_authenticated/operations/reservations'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -233,6 +246,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAchievementsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/operations/reservations': {
+      id: '/_authenticated/operations/reservations'
+      path: '/operations/reservations'
+      fullPath: '/operations/reservations'
+      preLoaderRoute: typeof AuthenticatedOperationsReservationsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/missions/$id': {
       id: '/_authenticated/missions/$id'
       path: '/missions/$id'
@@ -252,6 +272,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedTodayRoute: typeof AuthenticatedTodayRoute
   AuthenticatedMissionsIdRoute: typeof AuthenticatedMissionsIdRoute
+  AuthenticatedOperationsReservationsRoute: typeof AuthenticatedOperationsReservationsRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -263,6 +284,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedTodayRoute: AuthenticatedTodayRoute,
   AuthenticatedMissionsIdRoute: AuthenticatedMissionsIdRoute,
+  AuthenticatedOperationsReservationsRoute:
+    AuthenticatedOperationsReservationsRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
