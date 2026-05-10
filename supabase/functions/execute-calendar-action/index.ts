@@ -19,10 +19,14 @@ const GATEWAY_BASE = "https://connector-gateway.lovable.dev/google_calendar/cale
 
 // ---------- Helpers ----------
 
-function buildEventId(confirmationCode: string, checkInDate: string): string {
-  const code = confirmationCode.toLowerCase().replace(/[^a-z0-9]/g, "");
-  const date = checkInDate.replace(/-/g, "");
-  return `mc${code}${date}`;
+async function buildEventId(confirmationCode: string, checkInDate: string): Promise<string> {
+  const data = new TextEncoder().encode(`${confirmationCode}:${checkInDate}`);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashHex = Array.from(new Uint8Array(hashBuffer))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+  // Google Calendar custom event IDs must be base32hex (chars 0-9 and a-v), length 5-1024.
+  return `mc${hashHex.substring(0, 30)}`;
 }
 
 function fmtTime(t: string | null | undefined): string | null {
