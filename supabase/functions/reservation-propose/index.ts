@@ -331,41 +331,30 @@ Deno.serve(async (req) => {
       confirmation_code: r.confirmation_code,
     };
 
-    const { data: inserted, error: insErr } = await supabase
-      .from("agent_actions")
-      .insert({
-        user_id: userId,
-        source_type: "email",
-        source_ref: input.source_email_id ?? null,
-        agent_name: "reservation-propose",
-        action_type: "cancel_reservation",
-        payload: actionPayload,
-        confidence_score: input.confidence,
-        requires_approval: true,
-        idempotency_key: idempotencyKey,
-        group_key: idempotencyKey,
-        status: "proposed",
-      })
-      .select("id")
-      .maybeSingle();
+    const enqueueResult = await enqueueAgentAction(supabase, {
+      user_id: userId,
+      source_type: "email",
+      source_ref: input.source_email_id ?? null,
+      agent_name: "reservation-propose",
+      action_type: "cancel_reservation",
+      payload: actionPayload,
+      confidence_score: input.confidence,
+      requires_approval: true,
+      idempotency_key: idempotencyKey,
+      group_key: idempotencyKey,
+    });
 
-    if (insErr) {
-      const code = (insErr as { code?: string }).code;
-      if (code === "23505") {
-        const { data: dup } = await supabase
-          .from("agent_actions")
-          .select("id, status")
-          .eq("user_id", userId)
-          .eq("idempotency_key", idempotencyKey)
-          .maybeSingle();
-        return jsonResponse({
-          ok: true, duplicate: true, action_id: dup?.id ?? null,
-          existing_status: dup?.status ?? null, idempotency_key: idempotencyKey,
-          event_type: "cancel",
-        });
-      }
-      return jsonResponse({ ok: false, error: "insert_failed", detail: insErr.message }, 500);
+    if (!enqueueResult.ok) {
+      return jsonResponse({ ok: false, error: "insert_failed", detail: enqueueResult.error, issues: enqueueResult.issues }, 500);
     }
+    if (enqueueResult.duplicate) {
+      return jsonResponse({
+        ok: true, duplicate: true, action_id: enqueueResult.action_id,
+        existing_status: enqueueResult.existing_status ?? null, idempotency_key: idempotencyKey,
+        event_type: "cancel",
+      });
+    }
+    const insertedId = enqueueResult.action_id;
 
     const calSibling = await enqueueCalendarSibling(supabase, {
       userId,
@@ -382,13 +371,13 @@ Deno.serve(async (req) => {
 
     console.log(JSON.stringify({
       agent: "reservation-propose", event_type: "cancel",
-      confirmation_code: r.confirmation_code, action_id: inserted?.id,
+      confirmation_code: r.confirmation_code, action_id: insertedId,
       outcome: "proposed", idempotency_key: idempotencyKey,
       calendar_sibling_action_id: calSibling.action_id,
       calendar_sibling_duplicate: calSibling.duplicate,
     }));
     return jsonResponse({
-      ok: true, duplicate: false, action_id: inserted?.id,
+      ok: true, duplicate: false, action_id: insertedId,
       idempotency_key: idempotencyKey, event_type: "cancel",
       group_key: idempotencyKey,
       calendar_sibling: calSibling,
