@@ -12,6 +12,7 @@ import { z } from "https://esm.sh/zod@3.23.8";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { CORS, jsonResponse } from "../_shared/cors.ts";
 import { verifyRequest } from "../_shared/auth.ts";
+import { enqueueAgentAction } from "../_shared/agent-actions.ts";
 
 const HMAC_SECRET = Deno.env.get("CHAMON_HMAC_SECRET") ?? "";
 const BEARER_TOKEN = Deno.env.get("CHAMON_ELEVENLABS_BEARER") ?? undefined;
