@@ -48,9 +48,11 @@ export function useReservations(filters: ReservationFilters) {
   return useQuery({
     queryKey: ["reservations", filters],
     queryFn: async () => {
+      // No FK constraints exist between reservations<->properties/missions in the
+      // schema, so PostgREST embed syntax fails (PGRST200). Fetch + merge here.
       let q = supabase
         .from("reservations")
-        .select("*, property:properties(id, name, code, calendar_id), mission:missions(id, title, status, deleted_at)")
+        .select("*")
         .order("check_in_date", { ascending: false })
         .limit(200);
 
@@ -60,14 +62,40 @@ export function useReservations(filters: ReservationFilters) {
       if (filters.from) q = q.gte("check_in_date", filters.from);
       if (filters.to) q = q.lte("check_in_date", filters.to);
       if (filters.search && filters.search.trim()) {
-        const s = filters.search.trim().replace(/[%,]/g, "");
+        const s = filters.search.trim().replace(/[%,()]/g, "");
         q = q.or(
           `guest_name.ilike.%${s}%,guest_email.ilike.%${s}%,confirmation_code.ilike.%${s}%`,
         );
       }
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as unknown as ReservationWithRelations[];
+      const rows = (data ?? []) as ReservationRow[];
+
+      const propIds = Array.from(new Set(rows.map((r) => r.property_id).filter(Boolean) as string[]));
+      const missionIds = Array.from(new Set(rows.map((r) => r.mission_id).filter(Boolean) as string[]));
+
+      const [propsRes, missionsRes] = await Promise.all([
+        propIds.length
+          ? supabase.from("properties").select("id, name, code, calendar_id").in("id", propIds)
+          : Promise.resolve({ data: [], error: null } as any),
+        missionIds.length
+          ? supabase
+              .from("missions")
+              .select("id, title, status, deleted_at")
+              .in("id", missionIds)
+          : Promise.resolve({ data: [], error: null } as any),
+      ]);
+      if (propsRes.error) throw propsRes.error;
+      if (missionsRes.error) throw missionsRes.error;
+
+      const propMap = new Map<string, any>((propsRes.data ?? []).map((p: any) => [p.id, p]));
+      const missionMap = new Map<string, any>((missionsRes.data ?? []).map((m: any) => [m.id, m]));
+
+      return rows.map((r) => ({
+        ...r,
+        property: r.property_id ? propMap.get(r.property_id) ?? null : null,
+        mission: r.mission_id ? missionMap.get(r.mission_id) ?? null : null,
+      })) as ReservationWithRelations[];
     },
   });
 }
