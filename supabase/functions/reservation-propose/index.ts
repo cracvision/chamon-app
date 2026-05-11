@@ -218,42 +218,31 @@ Deno.serve(async (req) => {
       },
     };
 
-    const { data: inserted, error: insErr } = await supabase
-      .from("agent_actions")
-      .insert({
-        user_id: userId,
-        source_type: "email",
-        source_ref: input.source_email_id ?? null,
-        agent_name: "reservation-propose",
-        action_type: "create_reservation_with_mission",
-        payload: actionPayload,
-        confidence_score: input.confidence,
-        requires_approval: true,
-        idempotency_key: idempotencyKey,
-        group_key: idempotencyKey,
-        status: "proposed",
-      })
-      .select("id")
-      .maybeSingle();
+    const enqueueResult = await enqueueAgentAction(supabase, {
+      user_id: userId,
+      source_type: "email",
+      source_ref: input.source_email_id ?? null,
+      agent_name: "reservation-propose",
+      action_type: "create_reservation_with_mission",
+      payload: actionPayload,
+      confidence_score: input.confidence,
+      requires_approval: true,
+      idempotency_key: idempotencyKey,
+      group_key: idempotencyKey,
+    });
 
-    if (insErr) {
-      const code = (insErr as { code?: string }).code;
-      if (code === "23505") {
-        const { data: existing } = await supabase
-          .from("agent_actions")
-          .select("id, status")
-          .eq("user_id", userId)
-          .eq("idempotency_key", idempotencyKey)
-          .maybeSingle();
-        return jsonResponse({
-          ok: true, duplicate: true,
-          action_id: existing?.id ?? null,
-          existing_status: existing?.status ?? null,
-          idempotency_key: idempotencyKey,
-        });
-      }
-      return jsonResponse({ ok: false, error: "insert_failed", detail: insErr.message }, 500);
+    if (!enqueueResult.ok) {
+      return jsonResponse({ ok: false, error: "insert_failed", detail: enqueueResult.error, issues: enqueueResult.issues }, 500);
     }
+    if (enqueueResult.duplicate) {
+      return jsonResponse({
+        ok: true, duplicate: true,
+        action_id: enqueueResult.action_id,
+        existing_status: enqueueResult.existing_status ?? null,
+        idempotency_key: idempotencyKey,
+      });
+    }
+    const insertedId = enqueueResult.action_id;
 
     // Sibling: create_calendar_event (resolver-based, since reservation_id no existe aún)
     const calSibling = await enqueueCalendarSibling(supabase, {
