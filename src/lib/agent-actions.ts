@@ -242,6 +242,17 @@ export async function proposeAgentAction(input: {
     .select()
     .single();
   if (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "23505" && input.idempotency_key) {
+      // Idempotency: existing action with same key — return it instead of throwing.
+      const { data: dup } = await supabase
+        .from("agent_actions")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("idempotency_key", input.idempotency_key)
+        .maybeSingle();
+      if (dup) return dup;
+    }
     console.error("[agent-actions] propose failed", error, row);
     throw error;
   }
