@@ -12,6 +12,7 @@ import { z } from "https://esm.sh/zod@3.23.8";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { CORS, jsonResponse } from "../_shared/cors.ts";
 import { verifyRequest } from "../_shared/auth.ts";
+import { enqueueAgentAction } from "../_shared/agent-actions.ts";
 
 const HMAC_SECRET = Deno.env.get("CHAMON_HMAC_SECRET") ?? "";
 const BEARER_TOKEN = Deno.env.get("CHAMON_ELEVENLABS_BEARER") ?? undefined;
@@ -86,6 +87,7 @@ function formatCheckInShort(iso: string): string {
 // duplicate (23505) is treated as success; any other failure is logged but
 // does NOT block the main reservation action that was already enqueued.
 async function enqueueCalendarSibling(
+  // deno-lint-ignore no-explicit-any
   supabase: any,
   args: {
     userId: string;
@@ -93,43 +95,27 @@ async function enqueueCalendarSibling(
     groupKey: string;
     actionType: "create_calendar_event" | "update_calendar_event" | "delete_calendar_event";
     idempotencyKey: string;
-    payload: Record<string, any>;
+    payload: Record<string, unknown>;
     confidence: number;
   },
 ): Promise<{ action_id: string | null; duplicate: boolean; error?: string }> {
-  const { data: inserted, error: insErr } = await supabase
-    .from("agent_actions")
-    .insert({
-      user_id: args.userId,
-      source_type: "email",
-      source_ref: args.sourceEmailId,
-      agent_name: "reservation-propose",
-      action_type: args.actionType,
-      payload: args.payload,
-      confidence_score: args.confidence,
-      requires_approval: true,
-      idempotency_key: args.idempotencyKey,
-      group_key: args.groupKey,
-      status: "proposed",
-    })
-    .select("id")
-    .maybeSingle();
-
-  if (insErr) {
-    const code = (insErr as { code?: string }).code;
-    if (code === "23505") {
-      const { data: dup } = await supabase
-        .from("agent_actions")
-        .select("id")
-        .eq("user_id", args.userId)
-        .eq("idempotency_key", args.idempotencyKey)
-        .maybeSingle();
-      return { action_id: dup?.id ?? null, duplicate: true };
-    }
-    console.error("reservation-propose: calendar sibling insert failed", insErr);
-    return { action_id: null, duplicate: false, error: insErr.message };
+  const result = await enqueueAgentAction(supabase, {
+    user_id: args.userId,
+    source_type: "email",
+    source_ref: args.sourceEmailId,
+    agent_name: "reservation-propose",
+    action_type: args.actionType,
+    payload: args.payload,
+    confidence_score: args.confidence,
+    requires_approval: true,
+    idempotency_key: args.idempotencyKey,
+    group_key: args.groupKey,
+  });
+  if (!result.ok) {
+    console.error("reservation-propose: calendar sibling enqueue failed", result.error);
+    return { action_id: null, duplicate: false, error: result.error };
   }
-  return { action_id: inserted?.id ?? null, duplicate: false };
+  return { action_id: result.action_id, duplicate: result.duplicate };
 }
 
 function computeDiff(
@@ -232,42 +218,31 @@ Deno.serve(async (req) => {
       },
     };
 
-    const { data: inserted, error: insErr } = await supabase
-      .from("agent_actions")
-      .insert({
-        user_id: userId,
-        source_type: "email",
-        source_ref: input.source_email_id ?? null,
-        agent_name: "reservation-propose",
-        action_type: "create_reservation_with_mission",
-        payload: actionPayload,
-        confidence_score: input.confidence,
-        requires_approval: true,
-        idempotency_key: idempotencyKey,
-        group_key: idempotencyKey,
-        status: "proposed",
-      })
-      .select("id")
-      .maybeSingle();
+    const enqueueResult = await enqueueAgentAction(supabase, {
+      user_id: userId,
+      source_type: "email",
+      source_ref: input.source_email_id ?? null,
+      agent_name: "reservation-propose",
+      action_type: "create_reservation_with_mission",
+      payload: actionPayload,
+      confidence_score: input.confidence,
+      requires_approval: true,
+      idempotency_key: idempotencyKey,
+      group_key: idempotencyKey,
+    });
 
-    if (insErr) {
-      const code = (insErr as { code?: string }).code;
-      if (code === "23505") {
-        const { data: existing } = await supabase
-          .from("agent_actions")
-          .select("id, status")
-          .eq("user_id", userId)
-          .eq("idempotency_key", idempotencyKey)
-          .maybeSingle();
-        return jsonResponse({
-          ok: true, duplicate: true,
-          action_id: existing?.id ?? null,
-          existing_status: existing?.status ?? null,
-          idempotency_key: idempotencyKey,
-        });
-      }
-      return jsonResponse({ ok: false, error: "insert_failed", detail: insErr.message }, 500);
+    if (!enqueueResult.ok) {
+      return jsonResponse({ ok: false, error: "insert_failed", detail: enqueueResult.error, issues: enqueueResult.issues }, 500);
     }
+    if (enqueueResult.duplicate) {
+      return jsonResponse({
+        ok: true, duplicate: true,
+        action_id: enqueueResult.action_id,
+        existing_status: enqueueResult.existing_status ?? null,
+        idempotency_key: idempotencyKey,
+      });
+    }
+    const insertedId = enqueueResult.action_id;
 
     // Sibling: create_calendar_event (resolver-based, since reservation_id no existe aún)
     const calSibling = await enqueueCalendarSibling(supabase, {
@@ -286,14 +261,14 @@ Deno.serve(async (req) => {
 
     console.log(JSON.stringify({
       agent: "reservation-propose", event_type: "new",
-      confirmation_code: nr.confirmation_code, action_id: inserted?.id,
+      confirmation_code: nr.confirmation_code, action_id: insertedId,
       outcome: "proposed", idempotency_key: idempotencyKey,
       calendar_sibling_action_id: calSibling.action_id,
       calendar_sibling_duplicate: calSibling.duplicate,
     }));
     return jsonResponse({
       ok: true, duplicate: false,
-      action_id: inserted?.id, idempotency_key: idempotencyKey,
+      action_id: insertedId, idempotency_key: idempotencyKey,
       mission_title: missionTitle, event_type: "new",
       group_key: idempotencyKey,
       calendar_sibling: calSibling,
@@ -356,41 +331,30 @@ Deno.serve(async (req) => {
       confirmation_code: r.confirmation_code,
     };
 
-    const { data: inserted, error: insErr } = await supabase
-      .from("agent_actions")
-      .insert({
-        user_id: userId,
-        source_type: "email",
-        source_ref: input.source_email_id ?? null,
-        agent_name: "reservation-propose",
-        action_type: "cancel_reservation",
-        payload: actionPayload,
-        confidence_score: input.confidence,
-        requires_approval: true,
-        idempotency_key: idempotencyKey,
-        group_key: idempotencyKey,
-        status: "proposed",
-      })
-      .select("id")
-      .maybeSingle();
+    const enqueueResult = await enqueueAgentAction(supabase, {
+      user_id: userId,
+      source_type: "email",
+      source_ref: input.source_email_id ?? null,
+      agent_name: "reservation-propose",
+      action_type: "cancel_reservation",
+      payload: actionPayload,
+      confidence_score: input.confidence,
+      requires_approval: true,
+      idempotency_key: idempotencyKey,
+      group_key: idempotencyKey,
+    });
 
-    if (insErr) {
-      const code = (insErr as { code?: string }).code;
-      if (code === "23505") {
-        const { data: dup } = await supabase
-          .from("agent_actions")
-          .select("id, status")
-          .eq("user_id", userId)
-          .eq("idempotency_key", idempotencyKey)
-          .maybeSingle();
-        return jsonResponse({
-          ok: true, duplicate: true, action_id: dup?.id ?? null,
-          existing_status: dup?.status ?? null, idempotency_key: idempotencyKey,
-          event_type: "cancel",
-        });
-      }
-      return jsonResponse({ ok: false, error: "insert_failed", detail: insErr.message }, 500);
+    if (!enqueueResult.ok) {
+      return jsonResponse({ ok: false, error: "insert_failed", detail: enqueueResult.error, issues: enqueueResult.issues }, 500);
     }
+    if (enqueueResult.duplicate) {
+      return jsonResponse({
+        ok: true, duplicate: true, action_id: enqueueResult.action_id,
+        existing_status: enqueueResult.existing_status ?? null, idempotency_key: idempotencyKey,
+        event_type: "cancel",
+      });
+    }
+    const insertedId = enqueueResult.action_id;
 
     const calSibling = await enqueueCalendarSibling(supabase, {
       userId,
@@ -407,13 +371,13 @@ Deno.serve(async (req) => {
 
     console.log(JSON.stringify({
       agent: "reservation-propose", event_type: "cancel",
-      confirmation_code: r.confirmation_code, action_id: inserted?.id,
+      confirmation_code: r.confirmation_code, action_id: insertedId,
       outcome: "proposed", idempotency_key: idempotencyKey,
       calendar_sibling_action_id: calSibling.action_id,
       calendar_sibling_duplicate: calSibling.duplicate,
     }));
     return jsonResponse({
-      ok: true, duplicate: false, action_id: inserted?.id,
+      ok: true, duplicate: false, action_id: insertedId,
       idempotency_key: idempotencyKey, event_type: "cancel",
       group_key: idempotencyKey,
       calendar_sibling: calSibling,
@@ -441,41 +405,30 @@ Deno.serve(async (req) => {
       confirmation_code: r.confirmation_code,
     };
 
-    const { data: inserted, error: insErr } = await supabase
-      .from("agent_actions")
-      .insert({
-        user_id: userId,
-        source_type: "email",
-        source_ref: input.source_email_id ?? null,
-        agent_name: "reservation-propose",
-        action_type: "update_reservation",
-        payload: actionPayload,
-        confidence_score: input.confidence,
-        requires_approval: true,
-        idempotency_key: idempotencyKey,
-        group_key: idempotencyKey,
-        status: "proposed",
-      })
-      .select("id")
-      .maybeSingle();
+    const enqueueResult = await enqueueAgentAction(supabase, {
+      user_id: userId,
+      source_type: "email",
+      source_ref: input.source_email_id ?? null,
+      agent_name: "reservation-propose",
+      action_type: "update_reservation",
+      payload: actionPayload,
+      confidence_score: input.confidence,
+      requires_approval: true,
+      idempotency_key: idempotencyKey,
+      group_key: idempotencyKey,
+    });
 
-    if (insErr) {
-      const code = (insErr as { code?: string }).code;
-      if (code === "23505") {
-        const { data: dup } = await supabase
-          .from("agent_actions")
-          .select("id, status")
-          .eq("user_id", userId)
-          .eq("idempotency_key", idempotencyKey)
-          .maybeSingle();
-        return jsonResponse({
-          ok: true, duplicate: true, action_id: dup?.id ?? null,
-          existing_status: dup?.status ?? null, idempotency_key: idempotencyKey,
-          event_type: "update",
-        });
-      }
-      return jsonResponse({ ok: false, error: "insert_failed", detail: insErr.message }, 500);
+    if (!enqueueResult.ok) {
+      return jsonResponse({ ok: false, error: "insert_failed", detail: enqueueResult.error, issues: enqueueResult.issues }, 500);
     }
+    if (enqueueResult.duplicate) {
+      return jsonResponse({
+        ok: true, duplicate: true, action_id: enqueueResult.action_id,
+        existing_status: enqueueResult.existing_status ?? null, idempotency_key: idempotencyKey,
+        event_type: "update",
+      });
+    }
+    const insertedId = enqueueResult.action_id;
 
     const calSibling = await enqueueCalendarSibling(supabase, {
       userId,
@@ -492,14 +445,14 @@ Deno.serve(async (req) => {
 
     console.log(JSON.stringify({
       agent: "reservation-propose", event_type: "update",
-      confirmation_code: r.confirmation_code, action_id: inserted?.id,
+      confirmation_code: r.confirmation_code, action_id: insertedId,
       outcome: "proposed", idempotency_key: idempotencyKey,
       changed_fields: Object.keys(diff), recalc_task_dates: recalcDates,
       calendar_sibling_action_id: calSibling.action_id,
       calendar_sibling_duplicate: calSibling.duplicate,
     }));
     return jsonResponse({
-      ok: true, duplicate: false, action_id: inserted?.id,
+      ok: true, duplicate: false, action_id: insertedId,
       idempotency_key: idempotencyKey, event_type: "update",
       changed_fields: Object.keys(diff), recalc_task_dates: recalcDates,
       group_key: idempotencyKey,

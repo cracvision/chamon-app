@@ -123,11 +123,41 @@ export const deleteCalendarEventPayload = z.object({
   confirmation_code: z.string().optional(),
 });
 
+// create_reservation_with_mission: property_id at ROOT, then nested reservation/mission.
+const _resSubobject = z.object({
+  source: z.enum(["airbnb", "vrbo", "booking", "direct", "manual", "email_detected"]),
+  confirmation_code: z.string().min(1),
+  guest_name: z.string().optional().nullable(),
+  guest_email: z.string().email().optional().nullable(),
+  guest_phone: z.string().optional().nullable(),
+  check_in_date: dateString,
+  check_out_date: dateString,
+  check_in_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional().nullable(),
+  check_out_time: z.string().regex(/^\d{2}:\d{2}(:\d{2})?$/).optional().nullable(),
+  number_of_guests: z.number().int().positive().optional().nullable(),
+  payout_amount: z.number().optional().nullable(),
+  cleaning_fee: z.number().optional().nullable(),
+  taxes_or_fees: z.number().optional().nullable(),
+  source_email_ids: z.array(z.string()).optional(),
+  notes: z.string().optional().nullable(),
+});
+const _missSubobject = z.object({
+  template_id: z.string().uuid(),
+  title: z.string().min(1),
+  area_id: z.string().uuid().optional().nullable(),
+});
+export const createReservationWithMissionPayload = z.object({
+  property_id: z.string().uuid(),
+  reservation: _resSubobject,
+  mission: _missSubobject,
+});
+
 export const PAYLOAD_SCHEMAS = {
   create_task: createTaskPayload,
   create_mission: createMissionPayload,
   create_reservation: createReservationPayload,
   update_task: updateTaskPayload,
+  create_reservation_with_mission: createReservationWithMissionPayload,
   cancel_reservation: cancelReservationPayload,
   update_reservation: updateReservationPayload,
   create_calendar_event: createCalendarEventPayload,
@@ -212,6 +242,17 @@ export async function proposeAgentAction(input: {
     .select()
     .single();
   if (error) {
+    const code = (error as { code?: string }).code;
+    if (code === "23505" && input.idempotency_key) {
+      // Idempotency: existing action with same key — return it instead of throwing.
+      const { data: dup } = await supabase
+        .from("agent_actions")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("idempotency_key", input.idempotency_key)
+        .maybeSingle();
+      if (dup) return dup;
+    }
     console.error("[agent-actions] propose failed", error, row);
     throw error;
   }
