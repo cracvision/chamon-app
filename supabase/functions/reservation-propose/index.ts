@@ -87,6 +87,7 @@ function formatCheckInShort(iso: string): string {
 // duplicate (23505) is treated as success; any other failure is logged but
 // does NOT block the main reservation action that was already enqueued.
 async function enqueueCalendarSibling(
+  // deno-lint-ignore no-explicit-any
   supabase: any,
   args: {
     userId: string;
@@ -94,43 +95,27 @@ async function enqueueCalendarSibling(
     groupKey: string;
     actionType: "create_calendar_event" | "update_calendar_event" | "delete_calendar_event";
     idempotencyKey: string;
-    payload: Record<string, any>;
+    payload: Record<string, unknown>;
     confidence: number;
   },
 ): Promise<{ action_id: string | null; duplicate: boolean; error?: string }> {
-  const { data: inserted, error: insErr } = await supabase
-    .from("agent_actions")
-    .insert({
-      user_id: args.userId,
-      source_type: "email",
-      source_ref: args.sourceEmailId,
-      agent_name: "reservation-propose",
-      action_type: args.actionType,
-      payload: args.payload,
-      confidence_score: args.confidence,
-      requires_approval: true,
-      idempotency_key: args.idempotencyKey,
-      group_key: args.groupKey,
-      status: "proposed",
-    })
-    .select("id")
-    .maybeSingle();
-
-  if (insErr) {
-    const code = (insErr as { code?: string }).code;
-    if (code === "23505") {
-      const { data: dup } = await supabase
-        .from("agent_actions")
-        .select("id")
-        .eq("user_id", args.userId)
-        .eq("idempotency_key", args.idempotencyKey)
-        .maybeSingle();
-      return { action_id: dup?.id ?? null, duplicate: true };
-    }
-    console.error("reservation-propose: calendar sibling insert failed", insErr);
-    return { action_id: null, duplicate: false, error: insErr.message };
+  const result = await enqueueAgentAction(supabase, {
+    user_id: args.userId,
+    source_type: "email",
+    source_ref: args.sourceEmailId,
+    agent_name: "reservation-propose",
+    action_type: args.actionType,
+    payload: args.payload,
+    confidence_score: args.confidence,
+    requires_approval: true,
+    idempotency_key: args.idempotencyKey,
+    group_key: args.groupKey,
+  });
+  if (!result.ok) {
+    console.error("reservation-propose: calendar sibling enqueue failed", result.error);
+    return { action_id: null, duplicate: false, error: result.error };
   }
-  return { action_id: inserted?.id ?? null, duplicate: false };
+  return { action_id: result.action_id, duplicate: result.duplicate };
 }
 
 function computeDiff(
