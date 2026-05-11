@@ -261,14 +261,14 @@ Deno.serve(async (req) => {
 
     console.log(JSON.stringify({
       agent: "reservation-propose", event_type: "new",
-      confirmation_code: nr.confirmation_code, action_id: inserted?.id,
+      confirmation_code: nr.confirmation_code, action_id: insertedId,
       outcome: "proposed", idempotency_key: idempotencyKey,
       calendar_sibling_action_id: calSibling.action_id,
       calendar_sibling_duplicate: calSibling.duplicate,
     }));
     return jsonResponse({
       ok: true, duplicate: false,
-      action_id: inserted?.id, idempotency_key: idempotencyKey,
+      action_id: insertedId, idempotency_key: idempotencyKey,
       mission_title: missionTitle, event_type: "new",
       group_key: idempotencyKey,
       calendar_sibling: calSibling,
