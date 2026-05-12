@@ -67,6 +67,7 @@ export type Database = {
           payload: Json
           requires_approval: boolean
           result: Json | null
+          scheduled_for: string | null
           source_ref: string | null
           source_type: string
           status: string
@@ -93,6 +94,7 @@ export type Database = {
           payload?: Json
           requires_approval?: boolean
           result?: Json | null
+          scheduled_for?: string | null
           source_ref?: string | null
           source_type: string
           status?: string
@@ -119,6 +121,7 @@ export type Database = {
           payload?: Json
           requires_approval?: boolean
           result?: Json | null
+          scheduled_for?: string | null
           source_ref?: string | null
           source_type?: string
           status?: string
@@ -310,6 +313,7 @@ export type Database = {
       }
       contacts: {
         Row: {
+          categories: string[]
           created_at: string
           created_by: string | null
           deleted_at: string | null
@@ -319,12 +323,15 @@ export type Database = {
           name: string
           notes: string | null
           phone: string | null
+          preferred_channel: string | null
           role: string | null
           updated_at: string
           updated_by: string | null
           user_id: string
+          whatsapp_phone: string | null
         }
         Insert: {
+          categories?: string[]
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
@@ -334,12 +341,15 @@ export type Database = {
           name: string
           notes?: string | null
           phone?: string | null
+          preferred_channel?: string | null
           role?: string | null
           updated_at?: string
           updated_by?: string | null
           user_id: string
+          whatsapp_phone?: string | null
         }
         Update: {
+          categories?: string[]
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
@@ -349,10 +359,12 @@ export type Database = {
           name?: string
           notes?: string | null
           phone?: string | null
+          preferred_channel?: string | null
           role?: string | null
           updated_at?: string
           updated_by?: string | null
           user_id?: string
+          whatsapp_phone?: string | null
         }
         Relationships: []
       }
@@ -615,9 +627,13 @@ export type Database = {
       }
       notifications: {
         Row: {
+          channel: string
           email_to: string | null
           error: string | null
           id: string
+          phone_to: string | null
+          provider_message_id: string | null
+          read_at: string | null
           sent_at: string
           status: string
           subject: string | null
@@ -626,9 +642,13 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          channel?: string
           email_to?: string | null
           error?: string | null
           id?: string
+          phone_to?: string | null
+          provider_message_id?: string | null
+          read_at?: string | null
           sent_at?: string
           status: string
           subject?: string | null
@@ -637,9 +657,13 @@ export type Database = {
           user_id: string
         }
         Update: {
+          channel?: string
           email_to?: string | null
           error?: string | null
           id?: string
+          phone_to?: string | null
+          provider_message_id?: string | null
+          read_at?: string | null
           sent_at?: string
           status?: string
           subject?: string | null
@@ -752,6 +776,69 @@ export type Database = {
             columns: ["default_area_id"]
             isOneToOne: false
             referencedRelation: "areas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      property_vendor_assignments: {
+        Row: {
+          contact_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          id: string
+          is_primary: boolean
+          notes: string | null
+          property_id: string
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+          vendor_category: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: string
+          is_primary?: boolean
+          notes?: string | null
+          property_id: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+          vendor_category: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: string
+          is_primary?: boolean
+          notes?: string | null
+          property_id?: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+          vendor_category?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "property_vendor_assignments_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "property_vendor_assignments_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
             referencedColumns: ["id"]
           },
         ]
@@ -899,18 +986,22 @@ export type Database = {
       tasks: {
         Row: {
           agent_action_id: string | null
+          assignee_contact_id: string | null
           completed_at: string | null
+          confirmed_at: string | null
           created_at: string
           created_by: string | null
           deleted_at: string | null
           deleted_by: string | null
           due_date: string | null
           effort_minutes: number | null
+          escalated_at: string | null
           friction_level: number
           id: string
           is_today: boolean
           mission_id: string
           notes: string | null
+          notified_at: string | null
           sort_order: number
           status: string
           template_task_offset_anchor: string | null
@@ -919,21 +1010,26 @@ export type Database = {
           updated_at: string
           updated_by: string | null
           user_id: string
+          vendor_status: string | null
         }
         Insert: {
           agent_action_id?: string | null
+          assignee_contact_id?: string | null
           completed_at?: string | null
+          confirmed_at?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
           due_date?: string | null
           effort_minutes?: number | null
+          escalated_at?: string | null
           friction_level?: number
           id?: string
           is_today?: boolean
           mission_id: string
           notes?: string | null
+          notified_at?: string | null
           sort_order?: number
           status?: string
           template_task_offset_anchor?: string | null
@@ -942,21 +1038,26 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           user_id: string
+          vendor_status?: string | null
         }
         Update: {
           agent_action_id?: string | null
+          assignee_contact_id?: string | null
           completed_at?: string | null
+          confirmed_at?: string | null
           created_at?: string
           created_by?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
           due_date?: string | null
           effort_minutes?: number | null
+          escalated_at?: string | null
           friction_level?: number
           id?: string
           is_today?: boolean
           mission_id?: string
           notes?: string | null
+          notified_at?: string | null
           sort_order?: number
           status?: string
           template_task_offset_anchor?: string | null
@@ -965,6 +1066,7 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           user_id?: string
+          vendor_status?: string | null
         }
         Relationships: [
           {
@@ -972,6 +1074,13 @@ export type Database = {
             columns: ["agent_action_id"]
             isOneToOne: false
             referencedRelation: "agent_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_assignee_contact_id_fkey"
+            columns: ["assignee_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
           {
@@ -1198,6 +1307,14 @@ export type Database = {
           name: string
         }[]
       }
+      enqueue_escalate_no_response: {
+        Args: never
+        Returns: {
+          action_id: string
+          reason: string
+          task_id: string
+        }[]
+      }
       evaluate_achievements: { Args: { _user_id: string }; Returns: undefined }
       execute_agent_action: { Args: { _action_id: string }; Returns: Json }
       finalize_calendar_action: {
@@ -1212,9 +1329,28 @@ export type Database = {
         }
         Returns: Json
       }
+      finalize_notify_vendor: {
+        Args: {
+          _action_id: string
+          _channel?: string
+          _error_message?: string
+          _extra?: Json
+          _mode: string
+          _provider_message_id?: string
+          _to_address?: string
+        }
+        Returns: Json
+      }
       instantiate_template: {
         Args: { _context: Json; _template_id: string }
         Returns: string
+      }
+      pick_scheduled_notify_actions: {
+        Args: { _limit?: number }
+        Returns: {
+          action_id: string
+          user_id: string
+        }[]
       }
       resolve_pending_reservation_id: {
         Args: { _check_in_date: string; _confirmation_code: string }
