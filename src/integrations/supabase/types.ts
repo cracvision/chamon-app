@@ -1317,6 +1317,10 @@ export type Database = {
       }
       evaluate_achievements: { Args: { _user_id: string }; Returns: undefined }
       execute_agent_action: { Args: { _action_id: string }; Returns: Json }
+      execute_escalate_action_service: {
+        Args: { _action_id: string }
+        Returns: Json
+      }
       finalize_calendar_action: {
         Args: {
           _action_id: string
