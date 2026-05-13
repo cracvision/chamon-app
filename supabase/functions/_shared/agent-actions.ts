@@ -150,6 +150,30 @@ export const deleteCalendarEventPayload = z.object({
   confirmation_code: z.string().optional(),
 });
 
+// --- Cleaning Coordinator (Sprint 3.1) ---
+
+export const notifyVendorCleaningPayload = z.object({
+  task_id: z.string().uuid(),
+  vendor_contact_id: z.string().uuid(),
+  property_id: z.string().uuid().optional().nullable(),
+  reservation_confirmation_code: z.string().optional().nullable(),
+  service_type: z.enum(["pre_checkin", "post_checkout"]),
+  service_date: dateString,
+  guest_checkin_date: dateString,
+});
+
+export const markVendorConfirmedPayload = z.object({
+  task_id: z.string().uuid(),
+  confirmed_via: z.enum(["manual", "whatsapp", "email", "sms"]).optional(),
+  vendor_message: z.string().optional(),
+});
+
+export const escalateVendorNoResponsePayload = z.object({
+  task_id: z.string().uuid(),
+  hours_until_checkin: z.number().int().min(0).optional(),
+  reason: z.enum(["no_response", "never_notified"]).optional(),
+});
+
 export const PAYLOAD_SCHEMAS = {
   create_task: createTaskPayload,
   create_mission: createMissionPayload,
@@ -161,6 +185,9 @@ export const PAYLOAD_SCHEMAS = {
   create_calendar_event: createCalendarEventPayload,
   update_calendar_event: updateCalendarEventPayload,
   delete_calendar_event: deleteCalendarEventPayload,
+  notify_vendor_cleaning: notifyVendorCleaningPayload,
+  mark_vendor_confirmed: markVendorConfirmedPayload,
+  escalate_vendor_no_response: escalateVendorNoResponsePayload,
 } as const;
 
 export type AgentActionType = keyof typeof PAYLOAD_SCHEMAS;

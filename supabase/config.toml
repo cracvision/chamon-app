@@ -23,3 +23,12 @@ verify_jwt = false
 
 [functions.gmail-sync-reservations]
 verify_jwt = false
+
+[functions.cleaning-notify-vendor]
+verify_jwt = false
+
+[functions.dispatch-scheduled-actions]
+verify_jwt = false
+
+[functions.escalate-cleaning-check]
+verify_jwt = false
