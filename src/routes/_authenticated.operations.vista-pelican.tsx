@@ -93,7 +93,11 @@ function PropertyDashboard() {
     [reservations, today],
   );
 
-  const status = computeStatus(reservations, tasks);
+  const vendorAssignQ = useVendorAssignmentsForProperty(propertyId);
+  const hasCleaningVendor = (vendorAssignQ.data ?? []).some(
+    (a) => a.vendor_category === "vendor_cleaning" && a.is_primary,
+  );
+  const status = computeStatus(reservations, tasks, hasCleaningVendor);
   const statusColor = status === "ok" ? "text-emerald-400" : status === "attention" ? "text-amber-400" : "text-red-400";
   const statusEmoji = status === "ok" ? "🟢" : status === "attention" ? "🟡" : "🔴";
 
@@ -149,14 +153,41 @@ function PropertyDashboard() {
             <h1 className="text-lg font-semibold">{property.name}</h1>
             <p className="label-mono">{property.code ?? "—"}</p>
           </div>
-          <div className={`flex items-center gap-2 font-mono text-sm ${statusColor}`}>
-            <span className="text-lg">{statusEmoji}</span>
-            <span className="uppercase tracking-widest">
-              {status === "ok" ? "OK" : status === "attention" ? "Atención" : "Crítico"}
-            </span>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/operations/properties/$id"
+              params={{ id: property.id }}
+              className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-card-elevated hover:text-foreground"
+            >
+              <Settings className="h-3 w-3" />{t("vendors.configure")}
+            </Link>
+            <div className={`flex items-center gap-2 font-mono text-sm ${statusColor}`}>
+              <span className="text-lg">{statusEmoji}</span>
+              <span className="uppercase tracking-widest">
+                {status === "ok" ? "OK" : status === "attention" ? "Atención" : "Crítico"}
+              </span>
+            </div>
           </div>
         </div>
       </Card>
+
+      {!hasCleaningVendor && (
+        <Card className="mb-4 border-amber-500/40 bg-amber-500/10 p-3">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+            <div className="flex-1 text-sm text-amber-200">
+              {t("vendors.noPrimary")} ·{" "}
+              <Link
+                to="/operations/properties/$id"
+                params={{ id: property.id }}
+                className="underline hover:text-amber-100"
+              >
+                {t("vendors.configure")}
+              </Link>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
         <SummaryCard
