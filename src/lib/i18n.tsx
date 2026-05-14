@@ -379,6 +379,7 @@ const dict = {
     "property.detail.title": "Property details",
     "property.back": "Back",
   },
+} as const;
 
 type DictKey = keyof typeof dict.es;
 
