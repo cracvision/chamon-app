@@ -203,3 +203,120 @@ function Field({ label, value, mono }: { label: string; value: any; mono?: boole
     </div>
   );
 }
+
+const VENDOR_BADGE: Record<string, string> = {
+  assigned: "bg-zinc-500/15 text-zinc-300 border-zinc-500/30",
+  notified: "bg-blue-500/15 text-blue-300 border-blue-500/30",
+  confirmed: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+  escalated: "bg-red-500/15 text-red-300 border-red-500/30",
+};
+
+function TaskRow({ task, propertyId, missionId }: { task: any; propertyId: string | null; missionId: string | null }) {
+  const qc = useQueryClient();
+  const { t } = useI18n();
+  const { data: contacts = [] } = useContacts();
+  const done = !!task.completed_at || task.status === "done";
+  const overdue = !done && task.due_date && new Date(task.due_date) < new Date(new Date().toDateString());
+  const isCleaning = /Coordinar limpieza/i.test(task.title || "");
+  const vendorContact = task.assignee_contact_id
+    ? contacts.find((c: any) => c.id === task.assignee_contact_id)
+    : null;
+
+  const markConfirmed = useMutation({
+    mutationFn: async () => {
+      const action = await proposeAgentAction({
+        source_type: "manual",
+        agent_name: "operations_ui",
+        action_type: "mark_vendor_confirmed",
+        payload: { task_id: task.id, confirmed_via: "manual" },
+        requires_approval: false,
+        confidence_score: 1,
+      });
+      return executeAgentAction((action as any).id);
+    },
+    onSuccess: () => {
+      toast.success(t("saved"));
+      qc.invalidateQueries({ queryKey: ["mission_tasks", missionId] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "error"),
+  });
+
+  const markCompleted = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ status: "done", completed_at: new Date().toISOString() })
+        .eq("id", task.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success(t("saved"));
+      qc.invalidateQueries({ queryKey: ["mission_tasks", missionId] });
+    },
+    onError: (e: any) => toast.error(e?.message ?? "error"),
+  });
+
+  return (
+    <li className="flex items-start gap-2 text-sm">
+      {done ? (
+        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+      ) : overdue ? (
+        <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+      ) : (
+        <Circle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+      )}
+      <div className="min-w-0 flex-1">
+        <p className={`truncate ${done ? "text-muted-foreground line-through" : ""}`}>{task.title}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="label-mono">{task.due_date ?? "no date"}</p>
+          {isCleaning && task.vendor_status && (
+            <Badge variant="outline" className={VENDOR_BADGE[task.vendor_status] ?? ""}>
+              {t(`task.vendor.${task.vendor_status}` as any) || task.vendor_status}
+            </Badge>
+          )}
+          {vendorContact && (
+            <span className="font-mono text-[10px] text-muted-foreground">
+              → {(vendorContact as any).name}
+            </span>
+          )}
+        </div>
+        {isCleaning && !done && (
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {(task.vendor_status === "notified" || task.vendor_status === "escalated") && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 text-[11px]"
+                disabled={markConfirmed.isPending}
+                onClick={() => markConfirmed.mutate()}
+              >
+                {t("task.vendor.markConfirmed")}
+              </Button>
+            )}
+            {task.vendor_status === "confirmed" && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-6 px-2 text-[11px]"
+                disabled={markCompleted.isPending}
+                onClick={() => markCompleted.mutate()}
+              >
+                {t("task.vendor.markCompleted")}
+              </Button>
+            )}
+            {!task.vendor_status && propertyId && (
+              <Link
+                to="/operations/properties/$id"
+                params={{ id: propertyId }}
+                className="inline-flex items-center gap-1 rounded border border-border px-2 py-0.5 text-[11px] hover:bg-card-elevated"
+              >
+                <Settings className="h-3 w-3" />
+                {t("task.vendor.assignVendor")}
+              </Link>
+            )}
+          </div>
+        )}
+      </div>
+    </li>
+  );
+}
