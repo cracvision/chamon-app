@@ -1,6 +1,6 @@
 // Vendor email via Resend (gateway). Uses LOVABLE_API_KEY + RESEND_API_KEY.
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
+const RESEND_API_URL = "https://api.resend.com";
 
 export interface VendorEmailInput {
   to: string;
