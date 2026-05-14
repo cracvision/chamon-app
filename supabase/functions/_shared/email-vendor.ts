@@ -1,6 +1,6 @@
 // Vendor email via Resend (gateway). Uses LOVABLE_API_KEY + RESEND_API_KEY.
 
-const GATEWAY_URL = "https://connector-gateway.lovable.dev/resend";
+const RESEND_API_URL = "https://api.resend.com";
 
 export interface VendorEmailInput {
   to: string;
@@ -15,19 +15,17 @@ export type VendorEmailResult =
   | { ok: false; status: number; error: string };
 
 export async function sendVendorEmail(input: VendorEmailInput): Promise<VendorEmailResult> {
-  const lovableKey = Deno.env.get("LOVABLE_API_KEY") ?? "";
   const resendKey = Deno.env.get("RESEND_API_KEY") ?? "";
   const from = input.fromOverride ?? Deno.env.get("RESEND_FROM_EMAIL") ?? "Chamón <onboarding@resend.dev>";
-  if (!lovableKey || !resendKey) {
+  if (!resendKey) {
     return { ok: false, status: 0, error: "resend_not_configured" };
   }
 
-  const res = await fetch(`${GATEWAY_URL}/emails`, {
+  const res = await fetch(`${RESEND_API_URL}/emails`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      "Authorization": `Bearer ${lovableKey}`,
-      "X-Connection-Api-Key": resendKey,
+      "Authorization": `Bearer ${resendKey}`,
     },
     body: JSON.stringify({
       from,
