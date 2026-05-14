@@ -98,10 +98,10 @@ Deno.test("Test 9a — escalate_no_response for notified pre-checkin task", asyn
 });
 
 Deno.test("Test 9b — escalate never_notified for assigned post-checkout task", async () => {
-  // post-checkout task is still 'assigned' + no notified_at. Force its due_date inside window.
+  // Bring check_out_date inside 24h window. Pre-checkin already escalated in 9a.
   const tomorrow = new Date(); tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
   const isoDate = tomorrow.toISOString().slice(0, 10);
-  await sb.from("tasks").update({ due_date: isoDate }).eq("id", POST_TASK);
+  await sb.from("reservations").update({ check_out_date: isoDate }).eq("confirmation_code", "HMTEST_CLEAN_001");
 
   const res = await call({ fn: "escalate-cleaning-check", body: {}, mode: "hmac" });
   console.log("[Test 9b] response", res.status, JSON.stringify(res.json));
