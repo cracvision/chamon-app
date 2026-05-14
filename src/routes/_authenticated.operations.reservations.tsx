@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar as CalIcon, Trash2 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useProperties, useReservations, type ReservationWithRelations } from "@/lib/operations";
 import { ReservationDetail } from "@/components/operations/ReservationDetail";
 
@@ -180,7 +181,17 @@ function ReservationsPage() {
                 >
                   <TableCell className="font-mono text-xs">{r.confirmation_code ?? "—"}</TableCell>
                   <TableCell className="text-sm">{r.guest_name ?? "—"}</TableCell>
-                  <TableCell className="text-sm">{r.property?.name ?? "—"}</TableCell>
+                  <TableCell className="text-sm" onClick={(e) => e.stopPropagation()}>
+                    {r.property ? (
+                      <Link
+                        to="/operations/properties/$id"
+                        params={{ id: r.property.id }}
+                        className="hover:text-accent hover:underline"
+                      >
+                        {r.property.name}
+                      </Link>
+                    ) : "—"}
+                  </TableCell>
                   <TableCell className="font-mono text-xs">{r.check_in_date ?? "—"}</TableCell>
                   <TableCell className="font-mono text-xs">{r.check_out_date ?? "—"}</TableCell>
                   <TableCell>
