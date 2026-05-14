@@ -123,7 +123,7 @@ export function useMissionTasks(missionId: string | null | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tasks")
-        .select("id, title, status, due_date, completed_at, deleted_at, mission_id, template_task_offset_anchor, template_task_offset_days")
+        .select("id, title, status, due_date, completed_at, deleted_at, mission_id, template_task_offset_anchor, template_task_offset_days, assignee_contact_id, vendor_status, notified_at, confirmed_at, escalated_at")
         .eq("mission_id", missionId!)
         .is("deleted_at", null)
         .order("due_date", { ascending: true });
@@ -181,7 +181,7 @@ export function useTasksForProperty(propertyId: string | null | undefined) {
       if (missionIds.length === 0) return [];
       const { data, error } = await supabase
         .from("tasks")
-        .select("id, title, status, due_date, completed_at, deleted_at, mission_id")
+        .select("id, title, status, due_date, completed_at, deleted_at, mission_id, vendor_status, assignee_contact_id, notified_at, confirmed_at, escalated_at")
         .in("mission_id", missionIds)
         .is("deleted_at", null);
       if (error) throw error;
