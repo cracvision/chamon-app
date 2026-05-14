@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,9 +13,11 @@ import {
   useTasksForProperty,
   type ReservationRow,
 } from "@/lib/operations";
+import { useVendorAssignmentsForProperty } from "@/lib/vendors";
+import { useI18n } from "@/lib/i18n";
 import { ReservationDetail } from "@/components/operations/ReservationDetail";
 import { useReservations } from "@/lib/operations";
-import { AlertCircle, CheckCircle2, Circle } from "lucide-react";
+import { AlertCircle, CheckCircle2, Circle, Settings } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/operations/vista-pelican")({
   component: PropertyDashboard,
@@ -25,23 +27,29 @@ const VISTA_PELICAN_NAME = "Vista Pelícano";
 
 type OperationalStatus = "ok" | "attention" | "critical";
 
-function computeStatus(reservations: ReservationRow[], tasks: any[]): OperationalStatus {
+function computeStatus(reservations: ReservationRow[], tasks: any[], hasCleaningVendor: boolean): OperationalStatus {
   const now = new Date();
   const next24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  // 🔴 cleaning task pre-checkin in next 24h with notified|escalated and not confirmed
   const incomingSoon = reservations.find((r) => {
     if (r.status !== "confirmed" || !r.check_in_date) return false;
     const ci = new Date(r.check_in_date + "T00:00:00");
     return ci >= now && ci <= next24h;
   });
   if (incomingSoon) {
-    const cleaning = tasks.find(
+    const cleaningCrit = tasks.find(
       (t) =>
         t.mission_id === incomingSoon.mission_id &&
         /limpieza.*pre.?check.?in/i.test(t.title) &&
-        !t.completed_at,
+        !t.completed_at &&
+        (t.vendor_status === "notified" || t.vendor_status === "escalated") &&
+        t.vendor_status !== "confirmed",
     );
-    if (cleaning) return "critical";
+    if (cleaningCrit) return "critical";
   }
+  // 🟡 escalated active or no cleaning vendor
+  const anyEscalated = tasks.some((t) => !t.completed_at && t.vendor_status === "escalated");
+  if (anyEscalated || !hasCleaningVendor) return "attention";
   const todayStr = now.toISOString().slice(0, 10);
   const overdue = tasks.filter((t) => !t.completed_at && t.due_date && t.due_date < todayStr);
   if (overdue.length > 0) return "attention";
@@ -49,6 +57,7 @@ function computeStatus(reservations: ReservationRow[], tasks: any[]): Operationa
 }
 
 function PropertyDashboard() {
+  const { t } = useI18n();
   const propsQ = useProperties();
   const property = (propsQ.data ?? []).find((p: any) => p.name === VISTA_PELICAN_NAME)
     ?? (propsQ.data ?? [])[0];
@@ -84,7 +93,11 @@ function PropertyDashboard() {
     [reservations, today],
   );
 
-  const status = computeStatus(reservations, tasks);
+  const vendorAssignQ = useVendorAssignmentsForProperty(propertyId);
+  const hasCleaningVendor = (vendorAssignQ.data ?? []).some(
+    (a) => a.vendor_category === "vendor_cleaning" && a.is_primary,
+  );
+  const status = computeStatus(reservations, tasks, hasCleaningVendor);
   const statusColor = status === "ok" ? "text-emerald-400" : status === "attention" ? "text-amber-400" : "text-red-400";
   const statusEmoji = status === "ok" ? "🟢" : status === "attention" ? "🟡" : "🔴";
 
@@ -140,14 +153,41 @@ function PropertyDashboard() {
             <h1 className="text-lg font-semibold">{property.name}</h1>
             <p className="label-mono">{property.code ?? "—"}</p>
           </div>
-          <div className={`flex items-center gap-2 font-mono text-sm ${statusColor}`}>
-            <span className="text-lg">{statusEmoji}</span>
-            <span className="uppercase tracking-widest">
-              {status === "ok" ? "OK" : status === "attention" ? "Atención" : "Crítico"}
-            </span>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/operations/properties/$id"
+              params={{ id: property.id }}
+              className="inline-flex items-center gap-1 rounded border border-border px-2 py-1 text-xs text-muted-foreground hover:bg-card-elevated hover:text-foreground"
+            >
+              <Settings className="h-3 w-3" />{t("vendors.configure")}
+            </Link>
+            <div className={`flex items-center gap-2 font-mono text-sm ${statusColor}`}>
+              <span className="text-lg">{statusEmoji}</span>
+              <span className="uppercase tracking-widest">
+                {status === "ok" ? "OK" : status === "attention" ? "Atención" : "Crítico"}
+              </span>
+            </div>
           </div>
         </div>
       </Card>
+
+      {!hasCleaningVendor && (
+        <Card className="mb-4 border-amber-500/40 bg-amber-500/10 p-3">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
+            <div className="flex-1 text-sm text-amber-200">
+              {t("vendors.noPrimary")} ·{" "}
+              <Link
+                to="/operations/properties/$id"
+                params={{ id: property.id }}
+                className="underline hover:text-amber-100"
+              >
+                {t("vendors.configure")}
+              </Link>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
         <SummaryCard

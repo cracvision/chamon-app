@@ -9,6 +9,7 @@ import { QuickAddDialog } from "@/components/QuickAddDialog";
 import { ChamonVoiceWidget } from "@/components/ChamonVoiceWidget";
 import { XpHud } from "@/components/XpHud";
 import { XpWatcher } from "@/lib/xp-watcher";
+import { NotificationsBell } from "@/components/NotificationsBell";
 
 export const Route = createFileRoute("/_authenticated")({
   component: AuthLayout,
@@ -65,6 +66,7 @@ function AuthLayout() {
         <div className="flex shrink-0 items-center gap-1.5 lg:gap-3">
           <XpHud />
           <span className="hidden font-mono text-[12px] tabular-nums text-muted-foreground xl:inline">{time} AST</span>
+          <NotificationsBell />
           <LangToggle />
           <button
             onClick={() => setAgentHidden(v => !v)}
