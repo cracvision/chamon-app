@@ -22,6 +22,7 @@ import { Route as AuthenticatedAchievementsRouteImport } from './routes/_authent
 import { Route as AuthenticatedOperationsVistaPelicanRouteImport } from './routes/_authenticated.operations.vista-pelican'
 import { Route as AuthenticatedOperationsReservationsRouteImport } from './routes/_authenticated.operations.reservations'
 import { Route as AuthenticatedMissionsIdRouteImport } from './routes/_authenticated.missions.$id'
+import { Route as AuthenticatedOperationsPropertiesIdRouteImport } from './routes/_authenticated.operations.properties.$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -90,6 +91,12 @@ const AuthenticatedMissionsIdRoute = AuthenticatedMissionsIdRouteImport.update({
   path: '/missions/$id',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedOperationsPropertiesIdRoute =
+  AuthenticatedOperationsPropertiesIdRouteImport.update({
+    id: '/operations/properties/$id',
+    path: '/operations/properties/$id',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -104,6 +111,7 @@ export interface FileRoutesByFullPath {
   '/missions/$id': typeof AuthenticatedMissionsIdRoute
   '/operations/reservations': typeof AuthenticatedOperationsReservationsRoute
   '/operations/vista-pelican': typeof AuthenticatedOperationsVistaPelicanRoute
+  '/operations/properties/$id': typeof AuthenticatedOperationsPropertiesIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -118,6 +126,7 @@ export interface FileRoutesByTo {
   '/missions/$id': typeof AuthenticatedMissionsIdRoute
   '/operations/reservations': typeof AuthenticatedOperationsReservationsRoute
   '/operations/vista-pelican': typeof AuthenticatedOperationsVistaPelicanRoute
+  '/operations/properties/$id': typeof AuthenticatedOperationsPropertiesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -134,6 +143,7 @@ export interface FileRoutesById {
   '/_authenticated/missions/$id': typeof AuthenticatedMissionsIdRoute
   '/_authenticated/operations/reservations': typeof AuthenticatedOperationsReservationsRoute
   '/_authenticated/operations/vista-pelican': typeof AuthenticatedOperationsVistaPelicanRoute
+  '/_authenticated/operations/properties/$id': typeof AuthenticatedOperationsPropertiesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -150,6 +160,7 @@ export interface FileRouteTypes {
     | '/missions/$id'
     | '/operations/reservations'
     | '/operations/vista-pelican'
+    | '/operations/properties/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -164,6 +175,7 @@ export interface FileRouteTypes {
     | '/missions/$id'
     | '/operations/reservations'
     | '/operations/vista-pelican'
+    | '/operations/properties/$id'
   id:
     | '__root__'
     | '/'
@@ -179,6 +191,7 @@ export interface FileRouteTypes {
     | '/_authenticated/missions/$id'
     | '/_authenticated/operations/reservations'
     | '/_authenticated/operations/vista-pelican'
+    | '/_authenticated/operations/properties/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -280,6 +293,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMissionsIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/operations/properties/$id': {
+      id: '/_authenticated/operations/properties/$id'
+      path: '/operations/properties/$id'
+      fullPath: '/operations/properties/$id'
+      preLoaderRoute: typeof AuthenticatedOperationsPropertiesIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
@@ -294,6 +314,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedMissionsIdRoute: typeof AuthenticatedMissionsIdRoute
   AuthenticatedOperationsReservationsRoute: typeof AuthenticatedOperationsReservationsRoute
   AuthenticatedOperationsVistaPelicanRoute: typeof AuthenticatedOperationsVistaPelicanRoute
+  AuthenticatedOperationsPropertiesIdRoute: typeof AuthenticatedOperationsPropertiesIdRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -309,6 +330,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
     AuthenticatedOperationsReservationsRoute,
   AuthenticatedOperationsVistaPelicanRoute:
     AuthenticatedOperationsVistaPelicanRoute,
+  AuthenticatedOperationsPropertiesIdRoute:
+    AuthenticatedOperationsPropertiesIdRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
