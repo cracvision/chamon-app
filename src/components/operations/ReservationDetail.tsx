@@ -159,26 +159,15 @@ export function ReservationDetail({ reservation, open, onOpenChange }: Props) {
           {!tasksQ.isLoading && tasks.length === 0 && (
             <p className="text-xs text-muted-foreground">sin tasks</p>
           )}
-          <ul className="space-y-1.5">
-            {tasks.map((t: any) => {
-              const done = !!t.completed_at || t.status === "done";
-              const overdue = !done && t.due_date && new Date(t.due_date) < new Date(new Date().toDateString());
-              return (
-                <li key={t.id} className="flex items-start gap-2 text-sm">
-                  {done ? (
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
-                  ) : overdue ? (
-                    <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
-                  ) : (
-                    <Circle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <p className={`truncate ${done ? "text-muted-foreground line-through" : ""}`}>{t.title}</p>
-                    <p className="label-mono">{t.due_date ?? "no date"}</p>
-                  </div>
-                </li>
-              );
-            })}
+          <ul className="space-y-2">
+            {tasks.map((tk: any) => (
+              <TaskRow
+                key={tk.id}
+                task={tk}
+                propertyId={r.property?.id ?? null}
+                missionId={r.mission_id}
+              />
+            ))}
           </ul>
         </div>
 
