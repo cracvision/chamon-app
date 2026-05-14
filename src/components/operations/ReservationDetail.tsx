@@ -10,12 +10,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "@tanstack/react-router";
 import {
   fetchCalendarLink,
   useMissionTasks,
   type ReservationWithRelations,
 } from "@/lib/operations";
-import { proposeAgentAction } from "@/lib/agent-actions";
+import { proposeAgentAction, executeAgentAction } from "@/lib/agent-actions";
+import { useContacts } from "@/lib/queries";
+import { supabase } from "@/integrations/supabase/client";
+import { useI18n } from "@/lib/i18n";
 import { toast } from "sonner";
 import {
   Calendar as CalIcon,
@@ -24,6 +28,7 @@ import {
   ExternalLink,
   Trash2,
   XCircle,
+  Settings,
 } from "lucide-react";
 
 interface Props {
