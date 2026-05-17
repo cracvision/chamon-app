@@ -1356,6 +1356,14 @@ export type Database = {
           user_id: string
         }[]
       }
+      reassign_vendor_primary: {
+        Args: {
+          _new_contact_id: string
+          _property_id: string
+          _vendor_category: string
+        }
+        Returns: string
+      }
       resolve_pending_reservation_id: {
         Args: { _check_in_date: string; _confirmation_code: string }
         Returns: string
