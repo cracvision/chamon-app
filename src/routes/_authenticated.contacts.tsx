@@ -63,7 +63,10 @@ function ContactsPage() {
       notes: editing.notes || null,
       categories: editing.categories ?? [],
       whatsapp_phone: editing.whatsapp_phone || null,
-      preferred_channel: editing.preferred_channel || null,
+      preferred_channel:
+        !editing.preferred_channel || editing.preferred_channel === "auto"
+          ? null
+          : editing.preferred_channel,
     };
     if (editing.id) {
       const { error } = await supabase.from("contacts").update(payload as any).eq("id", editing.id);
