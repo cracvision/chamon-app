@@ -71,44 +71,13 @@ export function useAssignVendor(propertyId: string | null) {
       contact_id: string;
     }) => {
       if (!propertyId) throw new Error("propertyId required");
-      const { data: u } = await supabase.auth.getUser();
-      const userId = u.user?.id;
-      if (!userId) throw new Error("not authenticated");
-
-      // Soft-delete current primary in same category if exists
-      const nowIso = new Date().toISOString();
-      const { data: current } = await supabase
-        .from("property_vendor_assignments")
-        .select("id, contact_id")
-        .eq("property_id", propertyId)
-        .eq("vendor_category", input.vendor_category)
-        .eq("is_primary", true)
-        .is("deleted_at", null);
-
-      if (current && current.length > 0) {
-        // If same contact already assigned, no-op
-        if (current.some((c) => c.contact_id === input.contact_id)) {
-          return { unchanged: true };
-        }
-        await supabase
-          .from("property_vendor_assignments")
-          .update({ deleted_at: nowIso, deleted_by: userId })
-          .in("id", current.map((c) => c.id));
-      }
-
-      const { data, error } = await supabase
-        .from("property_vendor_assignments")
-        .insert({
-          user_id: userId,
-          property_id: propertyId,
-          contact_id: input.contact_id,
-          vendor_category: input.vendor_category,
-          is_primary: true,
-        } as any)
-        .select()
-        .single();
+      const { data, error } = await supabase.rpc("reassign_vendor_primary" as any, {
+        _property_id: propertyId,
+        _vendor_category: input.vendor_category,
+        _new_contact_id: input.contact_id,
+      });
       if (error) throw error;
-      return data;
+      return { id: data as unknown as string };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["pva", propertyId] });
