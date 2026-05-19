@@ -2,7 +2,7 @@ import { createFileRoute, Outlet, Navigate, Link, useRouterState } from "@tansta
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
-import { Radar, LayoutDashboard, Sun, Calendar, Users, Settings, LogOut, Plus, Trophy, MessageCircle, MessageCircleOff, Bot, Building2, ListChecks } from "lucide-react";
+import { Radar, LayoutDashboard, Sun, Calendar, Users, Settings, LogOut, Plus, Trophy, MessageCircle, MessageCircleOff, Bot, Building2, ListChecks, Wrench } from "lucide-react";
 import { LangToggle } from "@/components/LangToggle";
 import { Button } from "@/components/ui/button";
 import { QuickAddDialog } from "@/components/QuickAddDialog";
@@ -41,6 +41,7 @@ function AuthLayout() {
     { to: "/contacts", label: t("nav.contacts"), icon: Users },
     { to: "/operations/reservations", label: "Reservations", icon: ListChecks },
     { to: "/operations/vista-pelican", label: "Vista Pelícano", icon: Building2 },
+    { to: "/operations/maintenance", label: "Mantenimiento", icon: Wrench },
     { to: "/agent", label: "Agent", icon: Bot },
     { to: "/settings", label: t("nav.settings"), icon: Settings },
   ];
@@ -122,7 +123,7 @@ function AuthLayout() {
 
         {/* Mobile bottom nav */}
         <nav className="fixed bottom-0 left-0 right-0 z-30 grid grid-cols-5 border-t border-border bg-card lg:hidden">
-          {navItems.filter(i => !["/agent","/achievements","/operations/reservations","/operations/vista-pelican"].includes(i.to)).map(item => {
+          {navItems.filter(i => !["/agent","/achievements","/operations/reservations","/operations/vista-pelican","/operations/maintenance"].includes(i.to)).map(item => {
             const Icon = item.icon;
             const active = path === item.to;
             return (

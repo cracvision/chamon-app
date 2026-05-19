@@ -21,6 +21,7 @@ import { Route as AuthenticatedAgentRouteImport } from './routes/_authenticated.
 import { Route as AuthenticatedAchievementsRouteImport } from './routes/_authenticated.achievements'
 import { Route as AuthenticatedOperationsVistaPelicanRouteImport } from './routes/_authenticated.operations.vista-pelican'
 import { Route as AuthenticatedOperationsReservationsRouteImport } from './routes/_authenticated.operations.reservations'
+import { Route as AuthenticatedOperationsMaintenanceRouteImport } from './routes/_authenticated.operations.maintenance'
 import { Route as AuthenticatedMissionsIdRouteImport } from './routes/_authenticated.missions.$id'
 import { Route as AuthenticatedOperationsPropertiesIdRouteImport } from './routes/_authenticated.operations.properties.$id'
 
@@ -86,6 +87,12 @@ const AuthenticatedOperationsReservationsRoute =
     path: '/operations/reservations',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedOperationsMaintenanceRoute =
+  AuthenticatedOperationsMaintenanceRouteImport.update({
+    id: '/operations/maintenance',
+    path: '/operations/maintenance',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedMissionsIdRoute = AuthenticatedMissionsIdRouteImport.update({
   id: '/missions/$id',
   path: '/missions/$id',
@@ -109,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AuthenticatedSettingsRoute
   '/today': typeof AuthenticatedTodayRoute
   '/missions/$id': typeof AuthenticatedMissionsIdRoute
+  '/operations/maintenance': typeof AuthenticatedOperationsMaintenanceRoute
   '/operations/reservations': typeof AuthenticatedOperationsReservationsRoute
   '/operations/vista-pelican': typeof AuthenticatedOperationsVistaPelicanRoute
   '/operations/properties/$id': typeof AuthenticatedOperationsPropertiesIdRoute
@@ -124,6 +132,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AuthenticatedSettingsRoute
   '/today': typeof AuthenticatedTodayRoute
   '/missions/$id': typeof AuthenticatedMissionsIdRoute
+  '/operations/maintenance': typeof AuthenticatedOperationsMaintenanceRoute
   '/operations/reservations': typeof AuthenticatedOperationsReservationsRoute
   '/operations/vista-pelican': typeof AuthenticatedOperationsVistaPelicanRoute
   '/operations/properties/$id': typeof AuthenticatedOperationsPropertiesIdRoute
@@ -141,6 +150,7 @@ export interface FileRoutesById {
   '/_authenticated/settings': typeof AuthenticatedSettingsRoute
   '/_authenticated/today': typeof AuthenticatedTodayRoute
   '/_authenticated/missions/$id': typeof AuthenticatedMissionsIdRoute
+  '/_authenticated/operations/maintenance': typeof AuthenticatedOperationsMaintenanceRoute
   '/_authenticated/operations/reservations': typeof AuthenticatedOperationsReservationsRoute
   '/_authenticated/operations/vista-pelican': typeof AuthenticatedOperationsVistaPelicanRoute
   '/_authenticated/operations/properties/$id': typeof AuthenticatedOperationsPropertiesIdRoute
@@ -158,6 +168,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/today'
     | '/missions/$id'
+    | '/operations/maintenance'
     | '/operations/reservations'
     | '/operations/vista-pelican'
     | '/operations/properties/$id'
@@ -173,6 +184,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/today'
     | '/missions/$id'
+    | '/operations/maintenance'
     | '/operations/reservations'
     | '/operations/vista-pelican'
     | '/operations/properties/$id'
@@ -189,6 +201,7 @@ export interface FileRouteTypes {
     | '/_authenticated/settings'
     | '/_authenticated/today'
     | '/_authenticated/missions/$id'
+    | '/_authenticated/operations/maintenance'
     | '/_authenticated/operations/reservations'
     | '/_authenticated/operations/vista-pelican'
     | '/_authenticated/operations/properties/$id'
@@ -286,6 +299,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedOperationsReservationsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/operations/maintenance': {
+      id: '/_authenticated/operations/maintenance'
+      path: '/operations/maintenance'
+      fullPath: '/operations/maintenance'
+      preLoaderRoute: typeof AuthenticatedOperationsMaintenanceRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/missions/$id': {
       id: '/_authenticated/missions/$id'
       path: '/missions/$id'
@@ -312,6 +332,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRoute
   AuthenticatedTodayRoute: typeof AuthenticatedTodayRoute
   AuthenticatedMissionsIdRoute: typeof AuthenticatedMissionsIdRoute
+  AuthenticatedOperationsMaintenanceRoute: typeof AuthenticatedOperationsMaintenanceRoute
   AuthenticatedOperationsReservationsRoute: typeof AuthenticatedOperationsReservationsRoute
   AuthenticatedOperationsVistaPelicanRoute: typeof AuthenticatedOperationsVistaPelicanRoute
   AuthenticatedOperationsPropertiesIdRoute: typeof AuthenticatedOperationsPropertiesIdRoute
@@ -326,6 +347,8 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSettingsRoute: AuthenticatedSettingsRoute,
   AuthenticatedTodayRoute: AuthenticatedTodayRoute,
   AuthenticatedMissionsIdRoute: AuthenticatedMissionsIdRoute,
+  AuthenticatedOperationsMaintenanceRoute:
+    AuthenticatedOperationsMaintenanceRoute,
   AuthenticatedOperationsReservationsRoute:
     AuthenticatedOperationsReservationsRoute,
   AuthenticatedOperationsVistaPelicanRoute:
