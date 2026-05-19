@@ -174,6 +174,16 @@ export const escalateVendorNoResponsePayload = z.object({
   reason: z.enum(["no_response", "never_notified"]).optional(),
 });
 
+// --- Maintenance Memory (Sprint 3.2) ---
+export const createMaintenanceTaskPayload = z.object({
+  incident_id: z.string().uuid(),
+  property_id: z.string().uuid(),
+  asset_id: z.string().uuid().nullable().optional(),
+  title: z.string().min(1).max(200),
+  severity: z.enum(["high", "critical"]),
+  description: z.string().max(5000),
+});
+
 export const PAYLOAD_SCHEMAS = {
   create_task: createTaskPayload,
   create_mission: createMissionPayload,
@@ -188,6 +198,7 @@ export const PAYLOAD_SCHEMAS = {
   notify_vendor_cleaning: notifyVendorCleaningPayload,
   mark_vendor_confirmed: markVendorConfirmedPayload,
   escalate_vendor_no_response: escalateVendorNoResponsePayload,
+  create_maintenance_task: createMaintenanceTaskPayload,
 } as const;
 
 export type AgentActionType = keyof typeof PAYLOAD_SCHEMAS;

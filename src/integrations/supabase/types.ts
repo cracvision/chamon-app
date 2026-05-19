@@ -482,6 +482,169 @@ export type Database = {
         }
         Relationships: []
       }
+      incident_attachments: {
+        Row: {
+          caption: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          file_size_bytes: number | null
+          filename: string
+          id: string
+          incident_id: string
+          mime_type: string | null
+          storage_path: string
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          file_size_bytes?: number | null
+          filename: string
+          id?: string
+          incident_id: string
+          mime_type?: string | null
+          storage_path: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          file_size_bytes?: number | null
+          filename?: string
+          id?: string
+          incident_id?: string
+          mime_type?: string | null
+          storage_path?: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incident_attachments_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "maintenance_incidents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maintenance_incidents: {
+        Row: {
+          agent_action_id: string | null
+          asset_id: string | null
+          cost_amount: number | null
+          cost_currency: string | null
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          description: string
+          embedding: string | null
+          id: string
+          occurred_at: string
+          property_id: string
+          resolution_notes: string | null
+          resolved_at: string | null
+          severity: string
+          status: string
+          title: string
+          updated_at: string
+          updated_by: string | null
+          user_id: string
+          vendor_contact_id: string | null
+        }
+        Insert: {
+          agent_action_id?: string | null
+          asset_id?: string | null
+          cost_amount?: number | null
+          cost_currency?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description: string
+          embedding?: string | null
+          id?: string
+          occurred_at?: string
+          property_id: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          severity: string
+          status?: string
+          title: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id: string
+          vendor_contact_id?: string | null
+        }
+        Update: {
+          agent_action_id?: string | null
+          asset_id?: string | null
+          cost_amount?: number | null
+          cost_currency?: string | null
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string
+          embedding?: string | null
+          id?: string
+          occurred_at?: string
+          property_id?: string
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          updated_by?: string | null
+          user_id?: string
+          vendor_contact_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maintenance_incidents_agent_action_id_fkey"
+            columns: ["agent_action_id"]
+            isOneToOne: false
+            referencedRelation: "agent_actions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_incidents_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_incidents_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maintenance_incidents_vendor_contact_id_fkey"
+            columns: ["vendor_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mission_templates: {
         Row: {
           created_at: string
@@ -1315,8 +1478,16 @@ export type Database = {
           task_id: string
         }[]
       }
+      enqueue_maintenance_task_for_incident: {
+        Args: { _incident_id: string }
+        Returns: string
+      }
       evaluate_achievements: { Args: { _user_id: string }; Returns: undefined }
       execute_agent_action: { Args: { _action_id: string }; Returns: Json }
+      execute_create_maintenance_task_service: {
+        Args: { _action_id: string }
+        Returns: Json
+      }
       execute_escalate_action_service: {
         Args: { _action_id: string }
         Returns: Json
@@ -1344,6 +1515,29 @@ export type Database = {
           _to_address?: string
         }
         Returns: Json
+      }
+      find_similar_incidents: {
+        Args: {
+          _limit?: number
+          _property_id: string
+          _query_embedding: string
+        }
+        Returns: {
+          asset_id: string
+          asset_name: string
+          cost_amount: number
+          description: string
+          id: string
+          occurred_at: string
+          resolution_notes: string
+          resolved_at: string
+          severity: string
+          similarity: number
+          status: string
+          title: string
+          vendor_contact_id: string
+          vendor_name: string
+        }[]
       }
       instantiate_template: {
         Args: { _context: Json; _template_id: string }
