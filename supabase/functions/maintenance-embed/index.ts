@@ -26,17 +26,23 @@ Deno.serve(async (req) => {
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization") ?? "";
   let authedUserId: string | null = null;
-  const isSharedBearer = expectedBearer && authHeader === `Bearer ${expectedBearer}`;
-  const isServiceRole = serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`;
+  const incomingToken = authHeader.toLowerCase().startsWith("bearer ") ? authHeader.slice(7) : "";
+  const isSharedBearer = !!expectedBearer && incomingToken === expectedBearer;
+  const isServiceRole = !!serviceRoleKey && incomingToken === serviceRoleKey;
+  console.log("[maintenance-embed] auth", {
+    hasSharedBearer: !!expectedBearer,
+    hasServiceRole: !!serviceRoleKey,
+    incomingLen: incomingToken.length,
+    isSharedBearer, isServiceRole,
+  });
   if (!isSharedBearer && !isServiceRole) {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
-    const token = authHeader.toLowerCase().startsWith("bearer ") ? authHeader.slice(7) : "";
-    if (!supabaseUrl || !anonKey || !token) {
+    if (!supabaseUrl || !anonKey || !incomingToken) {
       return jsonResponse({ ok: false, error: "unauthorized", code: "AUTH" }, 401);
     }
     const userClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: `Bearer ${token}` } },
+      global: { headers: { Authorization: `Bearer ${incomingToken}` } },
       auth: { persistSession: false },
     });
     const { data: u, error: uErr } = await userClient.auth.getUser();
