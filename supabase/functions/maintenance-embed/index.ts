@@ -21,12 +21,14 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
   if (req.method !== "POST") return jsonResponse({ ok: false, error: "method_not_allowed" }, 405);
 
-  // Auth: accept either (a) shared bearer for internal/cron use, or (b) a valid Supabase user JWT.
+  // Auth: accept (a) shared bearer for internal/cron use, (b) service-role key, or (c) a valid Supabase user JWT.
   const expectedBearer = Deno.env.get("CHAMON_ELEVENLABS_BEARER");
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization") ?? "";
   let authedUserId: string | null = null;
   const isSharedBearer = expectedBearer && authHeader === `Bearer ${expectedBearer}`;
-  if (!isSharedBearer) {
+  const isServiceRole = serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`;
+  if (!isSharedBearer && !isServiceRole) {
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
     const token = authHeader.toLowerCase().startsWith("bearer ") ? authHeader.slice(7) : "";
