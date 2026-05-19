@@ -21,11 +21,25 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: CORS });
   if (req.method !== "POST") return jsonResponse({ ok: false, error: "method_not_allowed" }, 405);
 
-  // Auth
+  // Auth: accept either (a) shared bearer for internal/cron use, or (b) a valid Supabase user JWT.
   const expectedBearer = Deno.env.get("CHAMON_ELEVENLABS_BEARER");
   const authHeader = req.headers.get("authorization") ?? req.headers.get("Authorization") ?? "";
-  if (!expectedBearer || authHeader !== `Bearer ${expectedBearer}`) {
-    return jsonResponse({ ok: false, error: "unauthorized", code: "AUTH" }, 401);
+  let authedUserId: string | null = null;
+  const isSharedBearer = expectedBearer && authHeader === `Bearer ${expectedBearer}`;
+  if (!isSharedBearer) {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? Deno.env.get("SUPABASE_PUBLISHABLE_KEY");
+    const token = authHeader.toLowerCase().startsWith("bearer ") ? authHeader.slice(7) : "";
+    if (!supabaseUrl || !anonKey || !token) {
+      return jsonResponse({ ok: false, error: "unauthorized", code: "AUTH" }, 401);
+    }
+    const userClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } },
+      auth: { persistSession: false },
+    });
+    const { data: u, error: uErr } = await userClient.auth.getUser();
+    if (uErr || !u?.user?.id) return jsonResponse({ ok: false, error: "unauthorized", code: "AUTH" }, 401);
+    authedUserId = u.user.id;
   }
 
   let body: Body;
