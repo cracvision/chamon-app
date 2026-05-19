@@ -41,6 +41,7 @@ function AuthLayout() {
     { to: "/contacts", label: t("nav.contacts"), icon: Users },
     { to: "/operations/reservations", label: "Reservations", icon: ListChecks },
     { to: "/operations/vista-pelican", label: "Vista Pelícano", icon: Building2 },
+    { to: "/operations/maintenance", label: "Mantenimiento", icon: Wrench },
     { to: "/agent", label: "Agent", icon: Bot },
     { to: "/settings", label: t("nav.settings"), icon: Settings },
   ];
