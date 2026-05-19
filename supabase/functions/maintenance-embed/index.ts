@@ -99,7 +99,11 @@ Deno.serve(async (req) => {
     if (!row) return jsonResponse({ ok: false, error: "incident_not_found", code: "NOT_FOUND" }, 404);
     if (row.deleted_at) return jsonResponse({ ok: false, error: "incident_deleted", code: "GONE" }, 410);
 
-    const targetUserId = body.user_id ?? row.user_id;
+    // When called with a user JWT, enforce that the incident belongs to that user.
+    if (authedUserId && authedUserId !== row.user_id) {
+      return jsonResponse({ ok: false, error: "forbidden", code: "FORBIDDEN" }, 403);
+    }
+    const targetUserId = authedUserId ?? body.user_id ?? row.user_id;
     if (body.user_id && body.user_id !== row.user_id) {
       return jsonResponse({ ok: false, error: "user_mismatch", code: "FORBIDDEN" }, 403);
     }
