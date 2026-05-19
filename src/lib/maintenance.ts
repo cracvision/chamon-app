@@ -334,15 +334,103 @@ export function useSoftDeleteAsset(propertyId: string | null) {
 }
 
 // ---------------------------------------------------------------------------
-// INCIDENTS — Etapa 2/3 stubs
+// INCIDENTS — Etapa 2
 // ---------------------------------------------------------------------------
 
-export function useIncidents(_filters: IncidentFilters) {
+/**
+ * Lists incidents for a property with optional filters. Returns enriched rows
+ * including asset + vendor names, attachments count, and the latest agent
+ * action status (so the list can show "auto-task pending/created" badges).
+ */
+export function useIncidents(filters: IncidentFilters) {
   return useQuery({
-    queryKey: ["maintenance_incidents", _filters],
-    enabled: false,
+    queryKey: ["maintenance_incidents", filters],
+    enabled: !!filters.property_id,
     queryFn: async (): Promise<IncidentListItem[]> => {
-      throw new Error("useIncidents: Not yet implemented (Etapa 2)");
+      let q = supabase
+        .from("maintenance_incidents")
+        .select(
+          "id, user_id, property_id, asset_id, title, description, severity, status, occurred_at, resolved_at, cost_amount, cost_currency, vendor_contact_id, resolution_notes, agent_action_id, embedding, created_at, updated_at, deleted_at",
+        )
+        .eq("property_id", filters.property_id!)
+        .is("deleted_at", null)
+        .order("occurred_at", { ascending: false })
+        .limit(200);
+
+      if (filters.statuses && filters.statuses.length > 0) {
+        q = q.in("status", filters.statuses);
+      }
+      if (filters.severities && filters.severities.length > 0) {
+        q = q.in("severity", filters.severities);
+      }
+      if (filters.asset_ids && filters.asset_ids.length > 0) {
+        q = q.in("asset_id", filters.asset_ids);
+      }
+      if (filters.no_asset) q = q.is("asset_id", null);
+      if (filters.from) q = q.gte("occurred_at", filters.from);
+      if (filters.to) q = q.lte("occurred_at", filters.to);
+      if (filters.search && filters.search.trim()) {
+        const term = `%${filters.search.trim()}%`;
+        q = q.or(`title.ilike.${term},description.ilike.${term}`);
+      }
+
+      const { data, error } = await q;
+      if (error) throw error;
+      const rows = (data ?? []) as MaintenanceIncident[];
+      if (rows.length === 0) return [];
+
+      const assetIds = Array.from(
+        new Set(rows.map((r) => r.asset_id).filter(Boolean) as string[]),
+      );
+      const contactIds = Array.from(
+        new Set(rows.map((r) => r.vendor_contact_id).filter(Boolean) as string[]),
+      );
+      const incidentIds = rows.map((r) => r.id);
+      const actionIds = Array.from(
+        new Set(rows.map((r) => r.agent_action_id).filter(Boolean) as string[]),
+      );
+
+      const [assetsRes, contactsRes, attRes, actionsRes] = await Promise.all([
+        assetIds.length
+          ? supabase.from("assets").select("id, name, category").in("id", assetIds)
+          : Promise.resolve({ data: [], error: null }),
+        contactIds.length
+          ? supabase.from("contacts").select("id, name").in("id", contactIds)
+          : Promise.resolve({ data: [], error: null }),
+        supabase
+          .from("incident_attachments")
+          .select("incident_id")
+          .in("incident_id", incidentIds)
+          .is("deleted_at", null),
+        actionIds.length
+          ? supabase.from("agent_actions").select("id, status").in("id", actionIds)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      const assetById = new Map<string, { id: string; name: string; category: string | null }>();
+      for (const a of (assetsRes.data ?? []) as Array<{ id: string; name: string; category: string | null }>) {
+        assetById.set(a.id, a);
+      }
+      const contactById = new Map<string, { id: string; name: string }>();
+      for (const c of (contactsRes.data ?? []) as Array<{ id: string; name: string }>) {
+        contactById.set(c.id, c);
+      }
+      const attachCounts = new Map<string, number>();
+      for (const a of (attRes.data ?? []) as Array<{ incident_id: string }>) {
+        attachCounts.set(a.incident_id, (attachCounts.get(a.incident_id) ?? 0) + 1);
+      }
+      const actionStatus = new Map<string, string>();
+      for (const a of (actionsRes.data ?? []) as Array<{ id: string; status: string }>) {
+        actionStatus.set(a.id, a.status);
+      }
+
+      return rows.map<IncidentListItem>((r) => ({
+        ...r,
+        asset: r.asset_id ? assetById.get(r.asset_id) ?? null : null,
+        vendor: r.vendor_contact_id ? contactById.get(r.vendor_contact_id) ?? null : null,
+        attachments_count: attachCounts.get(r.id) ?? 0,
+        agent_action_status: r.agent_action_id ? actionStatus.get(r.agent_action_id) ?? null : null,
+      }));
     },
   });
 }
@@ -367,10 +455,59 @@ export function useIncidentTimeline(_id: string | null | undefined) {
   });
 }
 
+/**
+ * Creates an incident and triggers async embedding via the maintenance-embed
+ * edge function. The embedding call is fire-and-forget (failures don't roll
+ * back the insert; the embedding can be regenerated later from the detail UI).
+ */
 export function useCreateIncident() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (_values: IncidentFormValues): Promise<MaintenanceIncident> => {
-      throw new Error("useCreateIncident: Not yet implemented (Etapa 2)");
+    mutationFn: async (values: IncidentFormValues): Promise<MaintenanceIncident> => {
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData?.user?.id;
+      if (!uid) throw new Error("not authenticated");
+
+      const payload = {
+        property_id: values.property_id,
+        asset_id: values.asset_id || null,
+        title: values.title,
+        description: values.description,
+        severity: values.severity,
+        status: values.status ?? "open",
+        occurred_at: values.occurred_at,
+        vendor_contact_id: values.vendor_contact_id || null,
+        cost_amount: values.cost_amount ?? null,
+        cost_currency: values.cost_currency || "USD",
+        resolution_notes: values.resolution_notes || null,
+        resolved_at: values.resolved_at || null,
+        user_id: uid,
+      };
+
+      const { data, error } = await supabase
+        .from("maintenance_incidents")
+        .insert(payload)
+        .select()
+        .single();
+      if (error) throw error;
+      const incident = data as MaintenanceIncident;
+
+      // Fire-and-forget embedding generation. Auth header is attached
+      // automatically by supabase-js (user JWT).
+      const text = `${values.title}\n\n${values.description}`;
+      void supabase.functions
+        .invoke("maintenance-embed", {
+          body: { text, incident_id: incident.id },
+        })
+        .catch((e) => {
+          console.warn("maintenance-embed (create) failed", e);
+        });
+
+      return incident;
+    },
+    onSuccess: (incident) => {
+      qc.invalidateQueries({ queryKey: ["maintenance_incidents"] });
+      qc.invalidateQueries({ queryKey: ["assets_with_counts", incident.property_id] });
     },
   });
 }
@@ -411,17 +548,52 @@ export function useTransitionIncidentStatus() {
 }
 
 // ---------------------------------------------------------------------------
-// EMBEDDINGS / SEMANTIC SEARCH — Etapa 2 stubs
+// EMBEDDINGS / SEMANTIC SEARCH — Etapa 2
 // ---------------------------------------------------------------------------
 
+/**
+ * Asks the edge function for a query embedding (no incident_id => returned
+ * to the client) then runs the find_similar_incidents RPC scoped to the
+ * given property. RPC enforces auth.uid() server-side.
+ */
 export function useFindSimilarIncidents() {
   return useMutation({
-    mutationFn: async (_input: {
+    mutationFn: async (input: {
       text: string;
       property_id: string;
       limit?: number;
     }): Promise<SimilarIncident[]> => {
-      throw new Error("useFindSimilarIncidents: Not yet implemented (Etapa 2)");
+      const text = input.text.trim();
+      if (!text) return [];
+
+      const { data: embed, error: embedErr } = await supabase.functions.invoke(
+        "maintenance-embed",
+        { body: { text } },
+      );
+      if (embedErr) throw embedErr;
+      const embedding = (embed as { embedding?: number[] })?.embedding;
+      if (!Array.isArray(embedding) || embedding.length !== 1536) {
+        throw new Error("Embedding inválido");
+      }
+
+      const literal = "[" + embedding.join(",") + "]";
+      const { data, error } = await supabase.rpc("find_similar_incidents", {
+        _query_embedding: literal,
+        _property_id: input.property_id,
+        _limit: input.limit ?? 5,
+      });
+      if (error) throw error;
+      return (data ?? []).map((r) => ({
+        id: r.id,
+        title: r.title,
+        description: r.description,
+        severity: r.severity as IncidentSeverity,
+        status: r.status as IncidentStatus,
+        occurred_at: r.occurred_at,
+        resolution_notes: r.resolution_notes,
+        asset_id: r.asset_id,
+        similarity: r.similarity,
+      }));
     },
   });
 }
