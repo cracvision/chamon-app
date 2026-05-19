@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.escalate-cleaning-check]
 verify_jwt = false
+
+[functions.maintenance-embed]
+verify_jwt = false
