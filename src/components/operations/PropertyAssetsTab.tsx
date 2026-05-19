@@ -355,7 +355,7 @@ function AssetRow({ asset, onClick }: { asset: AssetWithCounts; onClick: () => v
         <span
           className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] ${badgeCls}`}
         >
-          {t(`asset.cat.${cat}` as const) ?? cat}
+          {t(`asset.cat.${cat}` as any) ?? cat}
         </span>
       </td>
       <td className="px-2 py-2 text-xs text-muted-foreground">
