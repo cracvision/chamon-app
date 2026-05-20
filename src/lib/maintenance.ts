@@ -443,13 +443,15 @@ async function writeIncidentEvent(
   const { data: userData } = await supabase.auth.getUser();
   const uid = userData?.user?.id;
   if (!uid) return;
-  await supabase.from("events").insert({
-    user_id: uid,
-    entity_type: "maintenance_incident",
-    entity_id: incidentId,
-    action,
-    metadata,
-  });
+  await supabase.from("events").insert([
+    {
+      user_id: uid,
+      entity_type: "maintenance_incident",
+      entity_id: incidentId,
+      action,
+      metadata: metadata as never,
+    },
+  ]);
 }
 
 export function useIncident(id: string | null | undefined) {
