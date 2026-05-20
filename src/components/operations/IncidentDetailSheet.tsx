@@ -235,34 +235,7 @@ export function IncidentDetailSheet({ incident, open, onClose }: Props) {
                 value="timeline"
                 className="flex-1 overflow-y-auto px-5 py-4"
               >
-                {timelineQ.isLoading ? (
-                  <Skeleton className="h-40 w-full" />
-                ) : !timelineQ.data || timelineQ.data.length === 0 ? (
-                  <p className="text-center text-xs text-muted-foreground">
-                    {t("maintenance.noTimeline")}
-                  </p>
-                ) : (
-                  <ol className="space-y-2.5">
-                    {timelineQ.data.map((ev) => (
-                      <li
-                        key={ev.id}
-                        className="rounded border border-border bg-card-elevated p-2.5"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-medium">{ev.action}</span>
-                          <span className="font-mono text-[10px] text-muted-foreground">
-                            {ev.created_at.slice(0, 16).replace("T", " ")}
-                          </span>
-                        </div>
-                        {ev.metadata && Object.keys(ev.metadata).length > 0 && (
-                          <pre className="mt-1 overflow-x-auto text-[10px] text-muted-foreground">
-                            {JSON.stringify(ev.metadata, null, 0)}
-                          </pre>
-                        )}
-                      </li>
-                    ))}
-                  </ol>
-                )}
+                <TimelinePanel data={timelineQ.data} loading={timelineQ.isLoading} />
               </TabsContent>
 
               <TabsContent
