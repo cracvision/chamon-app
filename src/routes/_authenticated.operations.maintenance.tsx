@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Search, Plus, Sparkles, Filter, X } from "lucide-react";
+import { Plus, Sparkles, Filter, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -33,6 +33,7 @@ import {
   type IncidentStatus,
   type SimilarIncident,
 } from "@/lib/maintenance";
+import { IncidentDetailSheet } from "@/components/operations/IncidentDetailSheet";
 
 export const Route = createFileRoute("/_authenticated/operations/maintenance")({
   component: MaintenancePage,
@@ -290,30 +291,15 @@ function MaintenancePage() {
 
         {/* RIGHT — actions panel */}
         <div className="space-y-3">
-          {selected && (
-            <Card className="p-3">
-              <div className="mb-1 flex items-center justify-between">
-                <p className="label-mono">Selected</p>
-                <button
-                  onClick={() => setSelectedId(null)}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-              <p className="text-sm font-medium">{selected.title}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
-                {selected.description}
-              </p>
-              <p className="mt-1 text-[10px] text-muted-foreground">
-                Detail sheet llega en Etapa 3.
-              </p>
-            </Card>
-          )}
-
           <NewIncidentPanel propertyId={effectiveProperty} />
         </div>
       </div>
+
+      <IncidentDetailSheet
+        incident={selected}
+        open={!!selected}
+        onClose={() => setSelectedId(null)}
+      />
     </div>
   );
 }
@@ -422,9 +408,7 @@ function NewIncidentPanel({ propertyId }: { propertyId: string | null }) {
     }
     try {
       const inc = await createMut.mutateAsync(parsed.data);
-      toast.success("Incidente creado", {
-        description: t("maintenance.embeddingPending"),
-      });
+      toast.success(t("maintenance.embeddingIndexing"));
       if (inc.severity === "high" || inc.severity === "critical") {
         toast.success(t("maintenance.autoTaskCreated"));
       }
@@ -561,15 +545,28 @@ function NewIncidentPanel({ propertyId }: { propertyId: string | null }) {
             </div>
           )}
 
-          <Button
-            size="sm"
-            onClick={onSave}
-            disabled={createMut.isPending}
-            className="bg-accent text-accent-foreground hover:bg-accent/90"
-          >
-            <Search className="mr-1 h-3.5 w-3.5 opacity-0" />
-            {createMut.isPending ? "Saving…" : "Crear incidente"}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={onSave}
+              disabled={createMut.isPending}
+              className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
+            >
+              {createMut.isPending ? "Saving…" : "Crear incidente"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={createMut.isPending}
+              onClick={() => {
+                setForm(emptyIncident(propertyId));
+                setOccurredLocal(nowLocalIso());
+                setSimilar(null);
+              }}
+            >
+              {t("maintenance.cancel")}
+            </Button>
+          </div>
         </div>
       </div>
     </Card>

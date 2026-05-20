@@ -435,30 +435,71 @@ export function useIncidents(filters: IncidentFilters) {
   });
 }
 
-export function useIncident(_id: string | null | undefined) {
+async function writeIncidentEvent(
+  incidentId: string,
+  action: string,
+  metadata: Record<string, unknown> = {},
+) {
+  const { data: userData } = await supabase.auth.getUser();
+  const uid = userData?.user?.id;
+  if (!uid) return;
+  await supabase.from("events").insert([
+    {
+      user_id: uid,
+      entity_type: "maintenance_incident",
+      entity_id: incidentId,
+      action,
+      metadata: metadata as never,
+    },
+  ]);
+}
+
+export function useIncident(id: string | null | undefined) {
   return useQuery({
-    queryKey: ["maintenance_incident", _id],
-    enabled: false,
+    queryKey: ["maintenance_incident", id],
+    enabled: !!id,
     queryFn: async (): Promise<MaintenanceIncident | null> => {
-      throw new Error("useIncident: Not yet implemented (Etapa 3)");
+      const { data, error } = await supabase
+        .from("maintenance_incidents")
+        .select("*")
+        .eq("id", id!)
+        .is("deleted_at", null)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as MaintenanceIncident) ?? null;
     },
   });
 }
 
-export function useIncidentTimeline(_id: string | null | undefined) {
+export type TimelineEvent = {
+  id: string;
+  action: string;
+  metadata: Record<string, unknown> | null;
+  created_at: string;
+};
+
+export function useIncidentTimeline(id: string | null | undefined) {
   return useQuery({
-    queryKey: ["maintenance_incident_timeline", _id],
-    enabled: false,
-    queryFn: async () => {
-      throw new Error("useIncidentTimeline: Not yet implemented (Etapa 3)");
+    queryKey: ["maintenance_incident_timeline", id],
+    enabled: !!id,
+    queryFn: async (): Promise<TimelineEvent[]> => {
+      const { data, error } = await supabase
+        .from("events")
+        .select("id, action, metadata, created_at")
+        .eq("entity_type", "maintenance_incident")
+        .eq("entity_id", id!)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      return (data ?? []) as TimelineEvent[];
     },
   });
 }
 
 /**
  * Creates an incident and triggers async embedding via the maintenance-embed
- * edge function. The embedding call is fire-and-forget (failures don't roll
- * back the insert; the embedding can be regenerated later from the detail UI).
+ * edge function. When the embedding RPC resolves we invalidate the list so the
+ * "embed pending" pill clears without a manual refresh.
  */
 export function useCreateIncident() {
   const qc = useQueryClient();
@@ -492,15 +533,25 @@ export function useCreateIncident() {
       if (error) throw error;
       const incident = data as MaintenanceIncident;
 
-      // Fire-and-forget embedding generation. Auth header is attached
-      // automatically by supabase-js (user JWT).
+      void writeIncidentEvent(incident.id, "created", {
+        severity: incident.severity,
+        asset_id: incident.asset_id,
+      });
+
+      // Fire-and-forget embedding. On resolve/reject invalidate the list so
+      // the "embed pending" pill flips. Errors are non-fatal.
       const text = `${values.title}\n\n${values.description}`;
       void supabase.functions
-        .invoke("maintenance-embed", {
-          body: { text, incident_id: incident.id },
+        .invoke("maintenance-embed", { body: { text, incident_id: incident.id } })
+        .then(({ error: embedErr }) => {
+          if (embedErr) {
+            console.warn("maintenance-embed (create) failed", embedErr);
+          }
+          qc.invalidateQueries({ queryKey: ["maintenance_incidents"] });
+          qc.invalidateQueries({ queryKey: ["maintenance_incident", incident.id] });
         })
         .catch((e) => {
-          console.warn("maintenance-embed (create) failed", e);
+          console.warn("maintenance-embed (create) threw", e);
         });
 
       return incident;
@@ -513,36 +564,115 @@ export function useCreateIncident() {
 }
 
 export function useUpdateIncident() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (_input: {
+    mutationFn: async (input: {
       id: string;
       values: Partial<IncidentFormValues>;
     }): Promise<MaintenanceIncident> => {
-      throw new Error("useUpdateIncident: Not yet implemented (Etapa 3)");
+      const { data, error } = await supabase
+        .from("maintenance_incidents")
+        .update(input.values)
+        .eq("id", input.id)
+        .select()
+        .single();
+      if (error) throw error;
+      return data as MaintenanceIncident;
+    },
+    onSuccess: (incident) => {
+      qc.invalidateQueries({ queryKey: ["maintenance_incidents"] });
+      qc.invalidateQueries({ queryKey: ["maintenance_incident", incident.id] });
     },
   });
 }
 
 export function useSoftDeleteIncident() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (_id: string) => {
-      throw new Error("useSoftDeleteIncident: Not yet implemented (Etapa 3)");
+    mutationFn: async (id: string) => {
+      const { data: userData } = await supabase.auth.getUser();
+      const { error } = await supabase
+        .from("maintenance_incidents")
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: userData?.user?.id,
+        })
+        .eq("id", id);
+      if (error) throw error;
+      return { id };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["maintenance_incidents"] });
     },
   });
 }
 
 export function useResolveIncident() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (_input: { id: string; values: ResolveIncidentValues }) => {
-      throw new Error("useResolveIncident: Not yet implemented (Etapa 3)");
+    mutationFn: async (input: { id: string; values: ResolveIncidentValues }) => {
+      const patch = {
+        status: "resolved" as IncidentStatus,
+        resolution_notes: input.values.resolution_notes,
+        vendor_contact_id: input.values.vendor_contact_id || null,
+        cost_amount: input.values.cost_amount ?? null,
+        cost_currency: input.values.cost_currency || "USD",
+        resolved_at: input.values.resolved_at,
+      };
+      const { data, error } = await supabase
+        .from("maintenance_incidents")
+        .update(patch)
+        .eq("id", input.id)
+        .select()
+        .single();
+      if (error) throw error;
+      const incident = data as MaintenanceIncident;
+      void writeIncidentEvent(incident.id, "resolved", {
+        cost_amount: patch.cost_amount,
+        cost_currency: patch.cost_currency,
+        vendor_contact_id: patch.vendor_contact_id,
+      });
+      return incident;
+    },
+    onSuccess: (incident) => {
+      qc.invalidateQueries({ queryKey: ["maintenance_incidents"] });
+      qc.invalidateQueries({ queryKey: ["maintenance_incident", incident.id] });
+      qc.invalidateQueries({ queryKey: ["maintenance_incident_timeline", incident.id] });
     },
   });
 }
 
 export function useTransitionIncidentStatus() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (_input: { id: string; to: IncidentStatus }) => {
-      throw new Error("useTransitionIncidentStatus: Not yet implemented (Etapa 3)");
+    mutationFn: async (input: {
+      id: string;
+      from: IncidentStatus;
+      to: IncidentStatus;
+    }) => {
+      const allowed = INCIDENT_STATUS_TRANSITIONS[input.from] ?? [];
+      if (!allowed.includes(input.to)) {
+        throw new Error(`Transición no permitida: ${input.from} → ${input.to}`);
+      }
+      const patch: { status: IncidentStatus } = { status: input.to };
+      const { data, error } = await supabase
+        .from("maintenance_incidents")
+        .update(patch)
+        .eq("id", input.id)
+        .select()
+        .single();
+      if (error) throw error;
+      const incident = data as MaintenanceIncident;
+      void writeIncidentEvent(incident.id, "status_changed", {
+        from: input.from,
+        to: input.to,
+      });
+      return incident;
+    },
+    onSuccess: (incident) => {
+      qc.invalidateQueries({ queryKey: ["maintenance_incidents"] });
+      qc.invalidateQueries({ queryKey: ["maintenance_incident", incident.id] });
+      qc.invalidateQueries({ queryKey: ["maintenance_incident_timeline", incident.id] });
     },
   });
 }
@@ -599,43 +729,134 @@ export function useFindSimilarIncidents() {
 }
 
 export function useRegenerateEmbedding() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (_input: { incident_id: string; text: string }) => {
-      throw new Error("useRegenerateEmbedding: Not yet implemented (Etapa 3)");
+    mutationFn: async (input: { incident_id: string; text: string }) => {
+      const { error } = await supabase.functions.invoke("maintenance-embed", {
+        body: { text: input.text, incident_id: input.incident_id },
+      });
+      if (error) throw error;
+      void writeIncidentEvent(input.incident_id, "embedding_regenerated", {});
+      return { ok: true };
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["maintenance_incidents"] });
+      qc.invalidateQueries({ queryKey: ["maintenance_incident", v.incident_id] });
+      qc.invalidateQueries({ queryKey: ["maintenance_incident_timeline", v.incident_id] });
     },
   });
 }
 
 // ---------------------------------------------------------------------------
-// ATTACHMENTS — Etapa 3 stubs
+// ATTACHMENTS — Etapa 3
 // ---------------------------------------------------------------------------
 
-export function useIncidentAttachments(_incidentId: string | null | undefined) {
+export function useIncidentAttachments(incidentId: string | null | undefined) {
   return useQuery({
-    queryKey: ["incident_attachments", _incidentId],
-    enabled: false,
+    queryKey: ["incident_attachments", incidentId],
+    enabled: !!incidentId,
     queryFn: async (): Promise<Array<IncidentAttachment & { signed_url: string | null }>> => {
-      throw new Error("useIncidentAttachments: Not yet implemented (Etapa 3)");
+      const { data, error } = await supabase
+        .from("incident_attachments")
+        .select("*")
+        .eq("incident_id", incidentId!)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      const list = (data ?? []) as IncidentAttachment[];
+      if (list.length === 0) return [];
+      const paths = list.map((a) => a.storage_path);
+      const { data: signed } = await supabase.storage
+        .from(ATTACHMENT_BUCKET)
+        .createSignedUrls(paths, 3600);
+      return list.map((a, i) => ({
+        ...a,
+        signed_url: signed?.[i]?.signedUrl ?? null,
+      }));
     },
   });
 }
 
 export function useUploadIncidentAttachment() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (_input: {
+    mutationFn: async (input: {
       incident_id: string;
       file: File;
       caption?: string;
     }): Promise<IncidentAttachment> => {
-      throw new Error("useUploadIncidentAttachment: Not yet implemented (Etapa 3)");
+      const { data: userData } = await supabase.auth.getUser();
+      const uid = userData?.user?.id;
+      if (!uid) throw new Error("not authenticated");
+      if (input.file.size > ATTACHMENT_MAX_BYTES) {
+        throw new Error(`Archivo > ${ATTACHMENT_MAX_BYTES / (1024 * 1024)} MB`);
+      }
+      const safeName = input.file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const path = `${uid}/${input.incident_id}/${crypto.randomUUID()}-${safeName}`;
+      const { error: upErr } = await supabase.storage
+        .from(ATTACHMENT_BUCKET)
+        .upload(path, input.file, {
+          contentType: input.file.type || "application/octet-stream",
+          upsert: false,
+        });
+      if (upErr) throw upErr;
+
+      const { data, error } = await supabase
+        .from("incident_attachments")
+        .insert({
+          user_id: uid,
+          incident_id: input.incident_id,
+          storage_path: path,
+          filename: input.file.name,
+          mime_type: input.file.type || null,
+          file_size_bytes: input.file.size,
+          caption: input.caption || null,
+        })
+        .select()
+        .single();
+      if (error) {
+        await supabase.storage.from(ATTACHMENT_BUCKET).remove([path]);
+        throw error;
+      }
+      const row = data as IncidentAttachment;
+      void writeIncidentEvent(input.incident_id, "attachment_uploaded", {
+        filename: row.filename,
+      });
+      return row;
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["incident_attachments", v.incident_id] });
+      qc.invalidateQueries({ queryKey: ["maintenance_incidents"] });
+      qc.invalidateQueries({ queryKey: ["maintenance_incident_timeline", v.incident_id] });
     },
   });
 }
 
 export function useDeleteIncidentAttachment() {
+  const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (_input: { id: string; storage_path: string }) => {
-      throw new Error("useDeleteIncidentAttachment: Not yet implemented (Etapa 3)");
+    mutationFn: async (input: {
+      id: string;
+      incident_id: string;
+      storage_path: string;
+    }) => {
+      const { data: userData } = await supabase.auth.getUser();
+      await supabase.storage.from(ATTACHMENT_BUCKET).remove([input.storage_path]);
+      const { error } = await supabase
+        .from("incident_attachments")
+        .update({
+          deleted_at: new Date().toISOString(),
+          deleted_by: userData?.user?.id,
+        })
+        .eq("id", input.id);
+      if (error) throw error;
+      void writeIncidentEvent(input.incident_id, "attachment_deleted", {});
+      return { ok: true };
+    },
+    onSuccess: (_d, v) => {
+      qc.invalidateQueries({ queryKey: ["incident_attachments", v.incident_id] });
+      qc.invalidateQueries({ queryKey: ["maintenance_incidents"] });
+      qc.invalidateQueries({ queryKey: ["maintenance_incident_timeline", v.incident_id] });
     },
   });
 }
