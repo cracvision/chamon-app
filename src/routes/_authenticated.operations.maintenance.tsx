@@ -408,9 +408,7 @@ function NewIncidentPanel({ propertyId }: { propertyId: string | null }) {
     }
     try {
       const inc = await createMut.mutateAsync(parsed.data);
-      toast.success("Incidente creado", {
-        description: t("maintenance.embeddingPending"),
-      });
+      toast.success(t("maintenance.embeddingIndexing"));
       if (inc.severity === "high" || inc.severity === "critical") {
         toast.success(t("maintenance.autoTaskCreated"));
       }
