@@ -834,8 +834,10 @@ export function useUploadIncidentAttachment() {
         throw error;
       }
       const row = data as IncidentAttachment;
-      void writeIncidentEvent(input.incident_id, "attachment_uploaded", {
+      await writeIncidentEvent(input.incident_id, "attachment_uploaded", {
         filename: row.filename,
+        mime_type: row.mime_type,
+        size_bytes: row.file_size_bytes,
       });
       return row;
     },
