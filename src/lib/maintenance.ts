@@ -654,10 +654,7 @@ export function useTransitionIncidentStatus() {
       if (!allowed.includes(input.to)) {
         throw new Error(`Transición no permitida: ${input.from} → ${input.to}`);
       }
-      const patch: Record<string, unknown> = { status: input.to };
-      if (input.to === "open" && input.from === "closed") {
-        // reopen — clear resolution_notes/resolved_at? Keep them as history. Just status.
-      }
+      const patch: { status: IncidentStatus } = { status: input.to };
       const { data, error } = await supabase
         .from("maintenance_incidents")
         .update(patch)
