@@ -856,6 +856,7 @@ export function useDeleteIncidentAttachment() {
       id: string;
       incident_id: string;
       storage_path: string;
+      filename?: string;
     }) => {
       const { data: userData } = await supabase.auth.getUser();
       await supabase.storage.from(ATTACHMENT_BUCKET).remove([input.storage_path]);
@@ -867,7 +868,9 @@ export function useDeleteIncidentAttachment() {
         })
         .eq("id", input.id);
       if (error) throw error;
-      void writeIncidentEvent(input.incident_id, "attachment_deleted", {});
+      await writeIncidentEvent(input.incident_id, "attachment_deleted", {
+        filename: input.filename ?? null,
+      });
       return { ok: true };
     },
     onSuccess: (_d, v) => {
