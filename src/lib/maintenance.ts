@@ -40,12 +40,27 @@ export const INCIDENT_OPEN_STATUSES: IncidentStatus[] = ["open", "diagnosing", "
 
 /** Allowed transitions per current status (used by the detail sheet). */
 export const INCIDENT_STATUS_TRANSITIONS: Record<IncidentStatus, IncidentStatus[]> = {
-  open: ["diagnosing", "resolved", "closed"],
-  diagnosing: ["in_progress", "resolved", "closed"],
-  in_progress: ["resolved", "diagnosing", "closed"],
+  open: ["diagnosing", "in_progress", "resolved", "closed"],
+  diagnosing: ["open", "in_progress", "resolved", "closed"],
+  in_progress: ["open", "diagnosing", "resolved", "closed"],
   resolved: ["closed", "open"],
   closed: ["open"],
 };
+
+/**
+ * Semantic event actions that the Timeline UI renders. The generic `updated`
+ * action emitted by the audit trigger is filtered out — each meaningful
+ * mutation also writes one of these via writeIncidentEvent().
+ */
+export const SEMANTIC_TIMELINE_ACTIONS = new Set([
+  "created",
+  "status_changed",
+  "resolved",
+  "embedding_regenerated",
+  "attachment_uploaded",
+  "attachment_deleted",
+  "task_auto_created",
+]);
 
 export const ATTACHMENT_BUCKET = "incident-attachments";
 export const ATTACHMENT_MAX_BYTES = 10 * 1024 * 1024; // 10 MB
