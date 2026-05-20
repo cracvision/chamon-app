@@ -33,6 +33,7 @@ import {
   type IncidentStatus,
   type SimilarIncident,
 } from "@/lib/maintenance";
+import { IncidentDetailSheet } from "@/components/operations/IncidentDetailSheet";
 
 export const Route = createFileRoute("/_authenticated/operations/maintenance")({
   component: MaintenancePage,
