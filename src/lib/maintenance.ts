@@ -751,7 +751,7 @@ export function useRegenerateEmbedding() {
         body: { text: input.text, incident_id: input.incident_id },
       });
       if (error) throw error;
-      void writeIncidentEvent(input.incident_id, "embedding_regenerated", {});
+      await writeIncidentEvent(input.incident_id, "embedding_regenerated", {});
       return { ok: true };
     },
     onSuccess: (_d, v) => {
