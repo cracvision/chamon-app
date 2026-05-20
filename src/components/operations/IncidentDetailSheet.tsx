@@ -289,7 +289,14 @@ function StatusTransitionRow({
   onChange: (to: IncidentStatus) => void;
 }) {
   const { t } = useI18n();
-  const allowed = INCIDENT_STATUS_TRANSITIONS[status] ?? [];
+  // Fix A: resolved/closed nunca por dropdown directo — violan el CHECK de
+  // resolution_consistency (resolved_at quedaría NULL). Resolved va por
+  // ResolveForm; closed solo permitido cuando ya está resolved.
+  const allowed = (INCIDENT_STATUS_TRANSITIONS[status] ?? []).filter((s) => {
+    if (s === "resolved") return false;
+    if (s === "closed") return status === "resolved";
+    return true;
+  });
   if (allowed.length === 0) return null;
   return (
     <div className="flex items-center gap-2 rounded border border-border p-2">
