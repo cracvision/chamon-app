@@ -429,7 +429,13 @@ function ResolveForm({
             toast.error(parsed.error.issues[0]?.message ?? "Validación falló");
             return;
           }
-          onSubmit(parsed.data);
+          onSubmit({
+            resolution_notes: parsed.data.resolution_notes,
+            vendor_contact_id: parsed.data.vendor_contact_id ?? null,
+            cost_amount: parsed.data.cost_amount ?? null,
+            cost_currency: parsed.data.cost_currency,
+            resolved_at: parsed.data.resolved_at,
+          });
         }}
       >
         {busy ? "…" : t("maintenance.resolve")}
