@@ -34,6 +34,7 @@ import { useContacts } from "@/lib/queries";
 import {
   ATTACHMENT_ACCEPT,
   INCIDENT_STATUS_TRANSITIONS,
+  SEMANTIC_TIMELINE_ACTIONS,
   SEVERITY_BADGE,
   STATUS_BADGE,
   resolveIncidentSchema,
@@ -48,6 +49,7 @@ import {
   useUploadIncidentAttachment,
   type IncidentListItem,
   type IncidentStatus,
+  type TimelineEvent,
 } from "@/lib/maintenance";
 import { formatBytes } from "@/lib/format";
 
