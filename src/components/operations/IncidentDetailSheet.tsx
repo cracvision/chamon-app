@@ -34,6 +34,7 @@ import { useContacts } from "@/lib/queries";
 import {
   ATTACHMENT_ACCEPT,
   INCIDENT_STATUS_TRANSITIONS,
+  SEMANTIC_TIMELINE_ACTIONS,
   SEVERITY_BADGE,
   STATUS_BADGE,
   resolveIncidentSchema,
@@ -48,6 +49,7 @@ import {
   useUploadIncidentAttachment,
   type IncidentListItem,
   type IncidentStatus,
+  type TimelineEvent,
 } from "@/lib/maintenance";
 import { formatBytes } from "@/lib/format";
 
@@ -233,34 +235,7 @@ export function IncidentDetailSheet({ incident, open, onClose }: Props) {
                 value="timeline"
                 className="flex-1 overflow-y-auto px-5 py-4"
               >
-                {timelineQ.isLoading ? (
-                  <Skeleton className="h-40 w-full" />
-                ) : !timelineQ.data || timelineQ.data.length === 0 ? (
-                  <p className="text-center text-xs text-muted-foreground">
-                    {t("maintenance.noTimeline")}
-                  </p>
-                ) : (
-                  <ol className="space-y-2.5">
-                    {timelineQ.data.map((ev) => (
-                      <li
-                        key={ev.id}
-                        className="rounded border border-border bg-card-elevated p-2.5"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="text-xs font-medium">{ev.action}</span>
-                          <span className="font-mono text-[10px] text-muted-foreground">
-                            {ev.created_at.slice(0, 16).replace("T", " ")}
-                          </span>
-                        </div>
-                        {ev.metadata && Object.keys(ev.metadata).length > 0 && (
-                          <pre className="mt-1 overflow-x-auto text-[10px] text-muted-foreground">
-                            {JSON.stringify(ev.metadata, null, 0)}
-                          </pre>
-                        )}
-                      </li>
-                    ))}
-                  </ol>
-                )}
+                <TimelinePanel data={timelineQ.data} loading={timelineQ.isLoading} />
               </TabsContent>
 
               <TabsContent
@@ -287,7 +262,14 @@ function StatusTransitionRow({
   onChange: (to: IncidentStatus) => void;
 }) {
   const { t } = useI18n();
-  const allowed = INCIDENT_STATUS_TRANSITIONS[status] ?? [];
+  // Fix A: resolved/closed nunca por dropdown directo — violan el CHECK de
+  // resolution_consistency (resolved_at quedaría NULL). Resolved va por
+  // ResolveForm; closed solo permitido cuando ya está resolved.
+  const allowed = (INCIDENT_STATUS_TRANSITIONS[status] ?? []).filter((s) => {
+    if (s === "resolved") return false;
+    if (s === "closed") return status === "resolved";
+    return true;
+  });
   if (allowed.length === 0) return null;
   return (
     <div className="flex items-center gap-2 rounded border border-border p-2">
@@ -557,6 +539,7 @@ function AttachmentsPanel({ incidentId }: { incidentId: string }) {
                           id: a.id,
                           incident_id: incidentId,
                           storage_path: a.storage_path,
+                          filename: a.filename,
                         });
                       } catch (e) {
                         toast.error(e instanceof Error ? e.message : "error");
@@ -582,5 +565,105 @@ function AttachmentsPanel({ incidentId }: { incidentId: string }) {
         </div>
       )}
     </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Timeline renderer (Fix D + E)
+// ---------------------------------------------------------------------------
+
+const TIMELINE_ICON: Record<string, string> = {
+  created: "✱",
+  status_changed: "→",
+  resolved: "✓",
+  embedding_regenerated: "⟳",
+  attachment_uploaded: "⇧",
+  attachment_deleted: "⇩",
+  task_auto_created: "⚡",
+};
+
+function formatTimelineEvent(ev: TimelineEvent): { label: string; detail: string | null } {
+  const m = (ev.metadata ?? {}) as Record<string, unknown>;
+  switch (ev.action) {
+    case "created": {
+      const sev = m.severity ? ` · severidad ${String(m.severity)}` : "";
+      return { label: "Incidente creado", detail: sev || null };
+    }
+    case "status_changed": {
+      const from = m.from ? String(m.from) : "?";
+      const to = m.to ? String(m.to) : "?";
+      return { label: `Status: ${from} → ${to}`, detail: null };
+    }
+    case "resolved": {
+      const parts: string[] = [];
+      if (m.cost_amount != null) {
+        parts.push(`${m.cost_amount} ${m.cost_currency ?? "USD"}`);
+      }
+      if (m.vendor_contact_id) parts.push("vendor asignado");
+      return { label: "Incidente resuelto", detail: parts.join(" · ") || null };
+    }
+    case "embedding_regenerated":
+      return { label: "Embedding regenerado", detail: null };
+    case "attachment_uploaded": {
+      const name = m.filename ? String(m.filename) : "archivo";
+      const size = m.size_bytes ? ` · ${Math.round(Number(m.size_bytes) / 1024)} KB` : "";
+      return { label: `Adjunto subido: ${name}`, detail: size || null };
+    }
+    case "attachment_deleted": {
+      const name = m.filename ? String(m.filename) : "archivo";
+      return { label: `Adjunto eliminado: ${name}`, detail: null };
+    }
+    case "task_auto_created":
+      return { label: "Task automática creada", detail: null };
+    default:
+      return { label: ev.action, detail: null };
+  }
+}
+
+function TimelinePanel({
+  data,
+  loading,
+}: {
+  data: TimelineEvent[] | undefined;
+  loading: boolean;
+}) {
+  const { t } = useI18n();
+  // Fix E: filtrar 'updated' genérico del audit trigger — solo mostrar eventos semánticos.
+  const events = (data ?? []).filter((e) => SEMANTIC_TIMELINE_ACTIONS.has(e.action));
+
+  if (loading) return <Skeleton className="h-40 w-full" />;
+  if (events.length === 0) {
+    return (
+      <p className="text-center text-xs text-muted-foreground">
+        {t("maintenance.noTimeline")}
+      </p>
+    );
+  }
+  return (
+    <ol className="space-y-2">
+      {events.map((ev) => {
+        const { label, detail } = formatTimelineEvent(ev);
+        const icon = TIMELINE_ICON[ev.action] ?? "•";
+        return (
+          <li
+            key={ev.id}
+            className="flex items-start gap-2 rounded border border-border bg-card-elevated p-2.5"
+          >
+            <span className="mt-0.5 font-mono text-xs text-muted-foreground">{icon}</span>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="truncate text-xs font-medium">{label}</span>
+                <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
+                  {ev.created_at.slice(0, 16).replace("T", " ")}
+                </span>
+              </div>
+              {detail && (
+                <p className="mt-0.5 text-[11px] text-muted-foreground">{detail}</p>
+              )}
+            </div>
+          </li>
+        );
+      })}
+    </ol>
   );
 }
