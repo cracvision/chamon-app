@@ -539,6 +539,7 @@ function AttachmentsPanel({ incidentId }: { incidentId: string }) {
                           id: a.id,
                           incident_id: incidentId,
                           storage_path: a.storage_path,
+                          filename: a.filename,
                         });
                       } catch (e) {
                         toast.error(e instanceof Error ? e.message : "error");
