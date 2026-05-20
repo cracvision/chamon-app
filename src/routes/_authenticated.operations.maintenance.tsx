@@ -290,30 +290,15 @@ function MaintenancePage() {
 
         {/* RIGHT — actions panel */}
         <div className="space-y-3">
-          {selected && (
-            <Card className="p-3">
-              <div className="mb-1 flex items-center justify-between">
-                <p className="label-mono">Selected</p>
-                <button
-                  onClick={() => setSelectedId(null)}
-                  className="text-muted-foreground hover:text-foreground"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </div>
-              <p className="text-sm font-medium">{selected.title}</p>
-              <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
-                {selected.description}
-              </p>
-              <p className="mt-1 text-[10px] text-muted-foreground">
-                Detail sheet llega en Etapa 3.
-              </p>
-            </Card>
-          )}
-
           <NewIncidentPanel propertyId={effectiveProperty} />
         </div>
       </div>
+
+      <IncidentDetailSheet
+        incident={selected}
+        open={!!selected}
+        onClose={() => setSelectedId(null)}
+      />
     </div>
   );
 }
