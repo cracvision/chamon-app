@@ -545,15 +545,28 @@ function NewIncidentPanel({ propertyId }: { propertyId: string | null }) {
             </div>
           )}
 
-          <Button
-            size="sm"
-            onClick={onSave}
-            disabled={createMut.isPending}
-            className="bg-accent text-accent-foreground hover:bg-accent/90"
-          >
-            <Search className="mr-1 h-3.5 w-3.5 opacity-0" />
-            {createMut.isPending ? "Saving…" : "Crear incidente"}
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              onClick={onSave}
+              disabled={createMut.isPending}
+              className="flex-1 bg-accent text-accent-foreground hover:bg-accent/90"
+            >
+              {createMut.isPending ? "Saving…" : "Crear incidente"}
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={createMut.isPending}
+              onClick={() => {
+                setForm(emptyIncident(propertyId));
+                setOccurredLocal(nowLocalIso());
+                setSimilar(null);
+              }}
+            >
+              {t("maintenance.cancel")}
+            </Button>
+          </div>
         </div>
       </div>
     </Card>
