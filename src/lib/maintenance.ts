@@ -450,23 +450,48 @@ export function useIncidents(filters: IncidentFilters) {
   });
 }
 
+/**
+ * Best-effort timeline event writer. Never throws — failures are logged to
+ * the console so the primary mutation (resolve, upload, delete, regen…) is
+ * never broken by an audit-log issue (RLS, CHECK constraint, network).
+ * All callers should treat this as fire-and-forget.
+ */
 async function writeIncidentEvent(
   incidentId: string,
   action: string,
   metadata: Record<string, unknown> = {},
-) {
-  const { data: userData } = await supabase.auth.getUser();
-  const uid = userData?.user?.id;
-  if (!uid) return;
-  await supabase.from("events").insert([
-    {
-      user_id: uid,
-      entity_type: "maintenance_incident",
-      entity_id: incidentId,
+): Promise<void> {
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    const uid = userData?.user?.id;
+    if (!uid) {
+      console.warn("[maintenance.writeIncidentEvent] no auth user", { action });
+      return;
+    }
+    const { error } = await supabase.from("events").insert([
+      {
+        user_id: uid,
+        entity_type: "maintenance_incident",
+        entity_id: incidentId,
+        action,
+        metadata: metadata as never,
+      },
+    ]);
+    if (error) {
+      console.error("[maintenance.writeIncidentEvent] insert failed", {
+        action,
+        incidentId,
+        code: error.code,
+        message: error.message,
+      });
+    }
+  } catch (e) {
+    console.error("[maintenance.writeIncidentEvent] exception", {
       action,
-      metadata: metadata as never,
-    },
-  ]);
+      incidentId,
+      err: e instanceof Error ? e.message : String(e),
+    });
+  }
 }
 
 export function useIncident(id: string | null | undefined) {
@@ -751,7 +776,7 @@ export function useRegenerateEmbedding() {
         body: { text: input.text, incident_id: input.incident_id },
       });
       if (error) throw error;
-      await writeIncidentEvent(input.incident_id, "embedding_regenerated", {});
+      void writeIncidentEvent(input.incident_id, "embedding_regenerated", {});
       return { ok: true };
     },
     onSuccess: (_d, v) => {
@@ -834,7 +859,7 @@ export function useUploadIncidentAttachment() {
         throw error;
       }
       const row = data as IncidentAttachment;
-      await writeIncidentEvent(input.incident_id, "attachment_uploaded", {
+      void writeIncidentEvent(input.incident_id, "attachment_uploaded", {
         filename: row.filename,
         mime_type: row.mime_type,
         size_bytes: row.file_size_bytes,
@@ -868,7 +893,7 @@ export function useDeleteIncidentAttachment() {
         })
         .eq("id", input.id);
       if (error) throw error;
-      await writeIncidentEvent(input.incident_id, "attachment_deleted", {
+      void writeIncidentEvent(input.incident_id, "attachment_deleted", {
         filename: input.filename ?? null,
       });
       return { ok: true };
