@@ -271,7 +271,8 @@ export async function enqueueAgentAction(
       }
       return { ok: false, error: "duplicate_idempotency_key_but_lookup_failed" };
     }
-    return { ok: false, error: error.message ?? "insert_failed" };
+    console.error("[agent-actions] insert failed:", error);
+    return { ok: false, error: "insert_failed" };
   }
 
   if (!data?.id) return { ok: false, error: "insert_returned_no_id" };

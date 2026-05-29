@@ -85,7 +85,8 @@ Deno.serve(async (req) => {
       return jsonResponse({ ok: false, error: "bad_embedding_shape", code: "GATEWAY", dims: embedding?.length ?? null }, 502);
     }
   } catch (e) {
-    return jsonResponse({ ok: false, error: "gateway_fetch_failed", code: "NETWORK", detail: String(e).slice(0, 300) }, 502);
+    console.error("[maintenance-embed] gateway fetch failed:", e);
+    return jsonResponse({ ok: false, error: "gateway_fetch_failed", code: "NETWORK" }, 502);
   }
 
   // Persist if incident_id present

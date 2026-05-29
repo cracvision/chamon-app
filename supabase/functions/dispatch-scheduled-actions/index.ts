@@ -50,7 +50,8 @@ Deno.serve(async (req) => {
       try { json = JSON.parse(text); } catch (_e) { json = { raw: text }; }
       results.push({ action_id: row.action_id, status: r.status, body: json });
     } catch (e) {
-      results.push({ action_id: row.action_id, error: String(e) });
+      console.error("[dispatch-scheduled-actions] dispatch failed:", row.action_id, e);
+      results.push({ action_id: row.action_id, error: "internal_error" });
     }
   }
 

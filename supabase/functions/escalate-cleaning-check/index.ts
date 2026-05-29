@@ -38,7 +38,8 @@ Deno.serve(async (req) => {
       _action_id: r.action_id,
     });
     if (error) {
-      executed.push({ action_id: r.action_id, ok: false, error: error.message });
+      console.error("[escalate-cleaning-check] execute failed:", r.action_id, error);
+      executed.push({ action_id: r.action_id, ok: false, error: "internal_error" });
     } else {
       executed.push({ action_id: r.action_id, task_id: r.task_id, reason: r.reason, result });
     }

@@ -37,7 +37,8 @@ Deno.serve(async (req) => {
     if (!result.ok) return json({ error: result.error || "send_failed" }, result.to ? 500 : 400);
     return json({ ok: true, tasks: result.tasks });
   } catch (e) {
-    return json({ error: String(e) }, 500);
+    console.error("[send-digest-now]", e);
+    return json({ error: "internal_error" }, 500);
   }
 });
 

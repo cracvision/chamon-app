@@ -241,8 +241,8 @@ Deno.serve(async (req) => {
   try {
     list = await gmailGet(envName, `/users/me/messages?${params.toString()}`) as ListResponse;
   } catch (e) {
-    console.error("gmail list failed", e);
-    return jsonResponse({ ok: false, error: "gmail_list_failed", detail: String(e) }, 502);
+    console.error("[gmail-sync-reservations] gmail list failed:", e);
+    return jsonResponse({ ok: false, error: "gmail_list_failed" }, 502);
   }
 
   const ids = (list.messages ?? []).map((m) => m.id);

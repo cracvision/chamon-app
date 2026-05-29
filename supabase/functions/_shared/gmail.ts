@@ -184,7 +184,8 @@ export async function listPrimaryMessagesAllAccounts(
         const email = await resolveAccountEmail(envName);
         return { envName, email };
       } catch (e) {
-        return { envName, email: null, error: String(e) };
+        console.error("[gmail] resolveAccountEmail failed:", envName, e);
+        return { envName, email: null, error: "gmail_token_failed" };
       }
     }),
   );
@@ -222,7 +223,8 @@ export async function listPrimaryMessagesAllAccounts(
         const items = await listPrimaryMessagesForAccount(t.envName, opts);
         return { account: t.email!, items, error: null as string | null };
       } catch (e) {
-        return { account: t.email!, items: [] as GmailMessageSummary[], error: String(e) };
+        console.error("[gmail] listPrimaryMessagesForAccount failed:", t.email, e);
+        return { account: t.email!, items: [] as GmailMessageSummary[], error: "gmail_fetch_failed" };
       }
     }),
   );
