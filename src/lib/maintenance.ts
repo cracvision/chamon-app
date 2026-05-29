@@ -385,7 +385,10 @@ export function useIncidents(filters: IncidentFilters) {
       if (filters.from) q = q.gte("occurred_at", filters.from);
       if (filters.to) q = q.lte("occurred_at", filters.to);
       if (filters.search && filters.search.trim()) {
-        const term = `%${filters.search.trim()}%`;
+        // Escape PostgREST filter-string special chars to prevent injection
+        // into the .or() expression (commas, parens, dots, backslashes).
+        const safe = filters.search.trim().replace(/[\\,()]/g, " ").slice(0, 200);
+        const term = `%${safe}%`;
         q = q.or(`title.ilike.${term},description.ilike.${term}`);
       }
 

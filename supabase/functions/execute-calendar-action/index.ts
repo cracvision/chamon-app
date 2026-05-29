@@ -147,18 +147,21 @@ Deno.serve(async (req) => {
     .select("id, user_id, action_type, payload, status, idempotency_key, group_key, source_ref")
     .eq("id", actionId)
     .maybeSingle();
-  if (actionErr) return jsonResponse({ ok: false, error: "action_lookup_failed", detail: actionErr.message }, 500);
+  if (actionErr) {
+    console.error("[execute-calendar-action] action lookup failed:", actionErr);
+    return jsonResponse({ ok: false, error: "action_lookup_failed" }, 500);
+  }
   if (!action) return jsonResponse({ ok: false, error: "action_not_found" }, 404);
 
   if (!["create_calendar_event", "update_calendar_event", "delete_calendar_event"].includes(action.action_type)) {
-    return jsonResponse({ ok: false, error: "wrong_action_type", detail: action.action_type }, 400);
+    return jsonResponse({ ok: false, error: "wrong_action_type" }, 400);
   }
 
   if (action.status === "executed") {
     return jsonResponse({ ok: true, already: true, action_id: action.id });
   }
   if (!["proposed", "approved"].includes(action.status)) {
-    return jsonResponse({ ok: false, error: "invalid_state", detail: action.status }, 409);
+    return jsonResponse({ ok: false, error: "invalid_state" }, 409);
   }
 
   const payload = (action.payload ?? {}) as Record<string, any>;
@@ -172,7 +175,10 @@ Deno.serve(async (req) => {
       _confirmation_code: confirmationCode,
       _check_in_date: pendingCheckIn,
     });
-    if (resolveErr) return jsonResponse({ ok: false, error: "resolve_failed", detail: resolveErr.message }, 500);
+    if (resolveErr) {
+      console.error("[execute-calendar-action] resolve failed:", resolveErr);
+      return jsonResponse({ ok: false, error: "resolve_failed" }, 500);
+    }
     if (!resolved) {
       // Mark failed — sister reservation didn't run yet (or doesn't exist).
       await supabase.rpc("finalize_calendar_action" as any, {
@@ -198,7 +204,10 @@ Deno.serve(async (req) => {
     .select("id, user_id, property_id, confirmation_code, guest_name, guest_email, guest_phone, number_of_guests, payout_amount, cleaning_fee, taxes_or_fees, check_in_date, check_out_date, check_in_time, check_out_time, calendar_event_id, source_email_ids")
     .eq("id", reservationId)
     .maybeSingle();
-  if (resErr) return jsonResponse({ ok: false, error: "reservation_lookup_failed", detail: resErr.message }, 500);
+  if (resErr) {
+    console.error("[execute-calendar-action] reservation lookup failed:", resErr);
+    return jsonResponse({ ok: false, error: "reservation_lookup_failed" }, 500);
+  }
   if (!reservation) {
     await supabase.rpc("finalize_calendar_action" as any, {
       _action_id: actionId, _mode: "failed", _error_message: "reservation_not_found",
@@ -211,7 +220,10 @@ Deno.serve(async (req) => {
     .select("id, calendar_id, calendar_timezone")
     .eq("id", reservation.property_id!)
     .maybeSingle();
-  if (propErr) return jsonResponse({ ok: false, error: "property_lookup_failed", detail: propErr.message }, 500);
+  if (propErr) {
+    console.error("[execute-calendar-action] property lookup failed:", propErr);
+    return jsonResponse({ ok: false, error: "property_lookup_failed" }, 500);
+  }
 
   const calendarId: string | null = property?.calendar_id ?? null;
   const tz: string = property?.calendar_timezone ?? "America/Puerto_Rico";
@@ -260,7 +272,7 @@ Deno.serve(async (req) => {
       await supabase.rpc("finalize_calendar_action" as any, {
         _action_id: actionId, _mode: "failed", _error_message: errMsg,
       });
-      return jsonResponse({ ok: false, error: "google_create_failed", status, detail: respBody }, 502);
+      return jsonResponse({ ok: false, error: "google_create_failed", status }, 502);
     }
 
     const { data: fin, error: finErr } = await supabase.rpc("finalize_calendar_action" as any, {
@@ -268,7 +280,10 @@ Deno.serve(async (req) => {
       _calendar_event_id: createdId, _html_link: htmlLink,
       _extra: { calendar_id: calendarId, conflict_409: status === 409 },
     });
-    if (finErr) return jsonResponse({ ok: false, error: "finalize_failed", detail: finErr.message }, 500);
+    if (finErr) {
+      console.error("[execute-calendar-action] finalize failed:", finErr);
+      return jsonResponse({ ok: false, error: "finalize_failed" }, 500);
+    }
     return jsonResponse({ ok: true, created: true, calendar_event_id: createdId, html_link: htmlLink, finalize: fin });
   }
 
@@ -302,7 +317,7 @@ Deno.serve(async (req) => {
         await supabase.rpc("finalize_calendar_action" as any, {
           _action_id: actionId, _mode: "failed", _error_message: errMsg,
         });
-        return jsonResponse({ ok: false, error: "google_recreate_failed", status: cStatus, detail: cBody }, 502);
+        return jsonResponse({ ok: false, error: "google_recreate_failed", status: cStatus }, 502);
       }
       const { data: fin } = await supabase.rpc("finalize_calendar_action" as any, {
         _action_id: actionId, _mode: "created",
@@ -319,7 +334,7 @@ Deno.serve(async (req) => {
       await supabase.rpc("finalize_calendar_action" as any, {
         _action_id: actionId, _mode: "failed", _error_message: errMsg,
       });
-      return jsonResponse({ ok: false, error: "google_update_failed", status, detail: respBody }, 502);
+      return jsonResponse({ ok: false, error: "google_update_failed", status }, 502);
     }
 
     const { data: fin } = await supabase.rpc("finalize_calendar_action" as any, {
@@ -360,7 +375,7 @@ Deno.serve(async (req) => {
     await supabase.rpc("finalize_calendar_action" as any, {
       _action_id: actionId, _mode: "failed", _error_message: errMsg,
     });
-    return jsonResponse({ ok: false, error: "google_delete_failed", status, detail: respBody }, 502);
+    return jsonResponse({ ok: false, error: "google_delete_failed", status }, 502);
   }
 
   return jsonResponse({ ok: false, error: "unreachable" }, 500);

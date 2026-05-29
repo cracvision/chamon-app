@@ -1,0 +1,1 @@
+DROP POLICY IF EXISTS email_ingestion_select_own ON public.email_ingestion_log;
