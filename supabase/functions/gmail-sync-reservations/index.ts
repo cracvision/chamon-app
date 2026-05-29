@@ -16,8 +16,8 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") ?? "";
 const CHAMON_USER_ID = Deno.env.get("CHAMON_USER_ID") ?? "";
 
-const TARGET_EMAIL = "cracevedoc@gmail.com";
-const TARGET_PROPERTY_ID = "ba09bfbe-4c4f-4d96-962b-1a14ef23f732";
+const TARGET_EMAIL = Deno.env.get("GMAIL_TARGET_EMAIL") ?? "";
+const TARGET_PROPERTY_ID = Deno.env.get("GMAIL_TARGET_PROPERTY_ID") ?? "";
 const MAX_EMAILS = 50;
 
 const GMAIL_GATEWAY = "https://connector-gateway.lovable.dev/google_mail/gmail/v1";
