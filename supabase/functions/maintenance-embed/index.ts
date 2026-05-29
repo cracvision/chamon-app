@@ -76,8 +76,9 @@ Deno.serve(async (req) => {
     });
     if (!r.ok) {
       const errBody = await r.text();
+      console.error("[maintenance-embed] gateway error", r.status, errBody.slice(0, 500));
       const code = r.status === 429 ? "RATE_LIMIT" : r.status === 402 ? "NO_CREDITS" : "GATEWAY";
-      return jsonResponse({ ok: false, error: `gateway_${r.status}`, code, detail: errBody.slice(0, 500) }, 502);
+      return jsonResponse({ ok: false, error: `gateway_${r.status}`, code }, 502);
     }
     const data = await r.json();
     embedding = data?.data?.[0]?.embedding;
@@ -104,7 +105,10 @@ Deno.serve(async (req) => {
       .select("id, user_id, deleted_at")
       .eq("id", body.incident_id)
       .maybeSingle();
-    if (lookupErr) return jsonResponse({ ok: false, error: lookupErr.message, code: "DB" }, 500);
+    if (lookupErr) {
+      console.error("[maintenance-embed] incident lookup failed:", lookupErr);
+      return jsonResponse({ ok: false, error: "db_error", code: "DB" }, 500);
+    }
     if (!row) return jsonResponse({ ok: false, error: "incident_not_found", code: "NOT_FOUND" }, 404);
     if (row.deleted_at) return jsonResponse({ ok: false, error: "incident_deleted", code: "GONE" }, 410);
 
@@ -128,7 +132,10 @@ Deno.serve(async (req) => {
       .eq("id", body.incident_id)
       .eq("user_id", targetUserId)
       .is("deleted_at", null);
-    if (updErr) return jsonResponse({ ok: false, error: updErr.message, code: "DB" }, 500);
+    if (updErr) {
+      console.error("[maintenance-embed] embedding update failed:", updErr);
+      return jsonResponse({ ok: false, error: "db_error", code: "DB" }, 500);
+    }
 
     return jsonResponse({ ok: true, persisted: true, incident_id: body.incident_id, dims: embedding.length });
   }
