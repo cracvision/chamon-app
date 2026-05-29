@@ -217,6 +217,9 @@ Deno.serve(async (req) => {
   if (!LOVABLE_API_KEY) {
     return jsonResponse({ ok: false, error: "missing_lovable_api_key" }, 500);
   }
+  if (!TARGET_EMAIL || !TARGET_PROPERTY_ID) {
+    return jsonResponse({ ok: false, error: "missing_target_config" }, 500);
+  }
 
   const envName = await findEnvForEmail(TARGET_EMAIL);
   if (!envName) {
