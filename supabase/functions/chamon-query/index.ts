@@ -178,6 +178,6 @@ Deno.serve(async (req) => {
     return json({ ok: true, query_type: queryType, data: result });
   } catch (e) {
     console.error("[chamon-query]", queryType, e);
-    return json({ error: MSG.internal, detail: String(e) }, 500);
+    return json({ error: MSG.internal }, 500);
   }
 });

@@ -44,7 +44,8 @@ Deno.serve(async (req) => {
   try {
     body = inputSchema.parse(JSON.parse(raw || "{}"));
   } catch (e) {
-    return jsonResponse({ error: "invalid_input", detail: String(e) }, 400);
+    console.error("[cleaning-notify-vendor] invalid input:", e);
+    return jsonResponse({ error: "invalid_input" }, 400);
   }
 
   const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {

@@ -39,7 +39,10 @@ Deno.serve(async (req) => {
       .eq("digest_enabled", true)
       .eq("digest_hour", hour);
 
-    if (error) return json({ error: error.message }, 500);
+    if (error) {
+      console.error("[send-digest-cron] profiles query failed:", error);
+      return json({ error: "internal_error" }, 500);
+    }
 
     const today = new Date().toISOString().slice(0, 10);
     const results: any[] = [];
@@ -70,13 +73,15 @@ Deno.serve(async (req) => {
         });
         results.push({ user_id: p.id, ok: r.ok, to: r.to, tasks: r.tasks, error: r.error });
       } catch (e) {
-        results.push({ user_id: p.id, ok: false, error: String(e) });
+        console.error("[send-digest-cron] user failed:", p.id, e);
+        results.push({ user_id: p.id, ok: false, error: "internal_error" });
       }
     }
 
     return json({ ok: true, hour, processed: results.length, results });
   } catch (e) {
-    return json({ error: String(e) }, 500);
+    console.error("[send-digest-cron]", e);
+    return json({ error: "internal_error" }, 500);
   }
 });
 
