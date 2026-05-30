@@ -95,7 +95,18 @@ function ReservationsPage() {
     <div className="mx-auto max-w-7xl p-4 lg:p-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-lg font-semibold">Operations · Reservations</h1>
-        <span className="label-mono">{rows.length} rows</span>
+        <div className="flex items-center gap-3">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={sync.isPending}
+            onClick={() => sync.mutate()}
+          >
+            <RefreshCw className={`mr-1 h-3 w-3 ${sync.isPending ? "animate-spin" : ""}`} />
+            Sincronizar reservas
+          </Button>
+          <span className="label-mono">{rows.length} rows</span>
+        </div>
       </div>
 
       {/* Filters */}
