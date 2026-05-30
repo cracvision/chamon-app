@@ -205,15 +205,62 @@ Deno.serve(async (req) => {
     return jsonResponse({ ok: false, error: "method_not_allowed" }, 405);
   }
 
-  const rawBody = await req.text();
-  const auth = await verifyRequest(HMAC_SECRET, BEARER_TOKEN, req.headers, rawBody);
-  if (!auth.ok) {
-    return jsonResponse({ ok: false, error: "unauthorized", reason: auth.error }, 401);
-  }
-
   if (!CHAMON_USER_ID) {
     return jsonResponse({ ok: false, error: "missing_chamon_user_id" }, 500);
   }
+
+  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+
+  const rawBody = await req.text();
+
+  // Auth: 3 modes, in order of precedence.
+  //  1. HMAC (x-chamon-timestamp + x-chamon-signature) — CLI/cron.
+  //  2. Bearer == CHAMON_ELEVENLABS_BEARER — ElevenLabs Server Tools.
+  //  3. Bearer == Supabase user JWT && user.id == CHAMON_USER_ID — owner UI.
+  //
+  // verifyRequest handles (1) and (2). If both fail and the request carries
+  // an Authorization: Bearer header, try (3). Never log the token.
+  const hasHmacHeaders =
+    !!req.headers.get("x-chamon-timestamp") || !!req.headers.get("x-chamon-signature");
+  const authz = req.headers.get("authorization");
+
+  let authMode: "hmac" | "bearer" | "user_jwt" | null = null;
+
+  if (hasHmacHeaders) {
+    const r = await verifyRequest(HMAC_SECRET, BEARER_TOKEN, req.headers, rawBody);
+    if (!r.ok) return jsonResponse({ ok: false, error: "unauthorized", reason: r.error }, 401);
+    authMode = "hmac";
+  } else if (authz) {
+    // Try static Bearer first (constant-time inside verifyRequest).
+    const staticTry = BEARER_TOKEN
+      ? await verifyRequest(HMAC_SECRET, BEARER_TOKEN, req.headers, rawBody)
+      : { ok: false, error: "no_bearer_configured" as const };
+    if (staticTry.ok) {
+      authMode = "bearer";
+    } else {
+      // Fall through: try as Supabase user JWT, restricted to owner.
+      const m = authz.match(/^Bearer\s+(.+)$/i);
+      const token = (m ? m[1] : authz).trim();
+      if (!token) {
+        return jsonResponse({ ok: false, error: "unauthorized", reason: "empty_bearer" }, 401);
+      }
+      const { data, error } = await supabase.auth.getUser(token);
+      if (error || !data.user) {
+        return jsonResponse({ ok: false, error: "unauthorized", reason: "bad_jwt" }, 401);
+      }
+      if (data.user.id !== CHAMON_USER_ID) {
+        return jsonResponse({ ok: false, error: "forbidden", reason: "not_owner" }, 403);
+      }
+      authMode = "user_jwt";
+    }
+  } else {
+    return jsonResponse({ ok: false, error: "unauthorized", reason: "missing_headers" }, 401);
+  }
+
+  console.log(JSON.stringify({ agent: "gmail-sync-reservations", auth_mode: authMode }));
+
   if (!LOVABLE_API_KEY) {
     return jsonResponse({ ok: false, error: "missing_lovable_api_key" }, 500);
   }
@@ -228,10 +275,6 @@ Deno.serve(async (req) => {
       500,
     );
   }
-
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
 
   // Gmail search query — broadened in Sprint 2.3 to include cancel/update emails.
   const q = [

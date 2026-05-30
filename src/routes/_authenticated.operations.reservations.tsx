@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,8 +21,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar as CalIcon, Trash2 } from "lucide-react";
+import { Calendar as CalIcon, RefreshCw, Trash2 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { useProperties, useReservations, type ReservationWithRelations } from "@/lib/operations";
 import { ReservationDetail } from "@/components/operations/ReservationDetail";
 
@@ -70,11 +73,40 @@ function ReservationsPage() {
     [rows],
   );
 
+  const sync = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("gmail-sync-reservations", {
+        method: "POST",
+        body: {},
+      });
+      if (error) throw error;
+      return data as { ok: boolean; scanned?: number; proposed?: number; duplicates?: number; errors?: number };
+    },
+    onSuccess: (d) => {
+      toast.success(
+        `Sync ok — ${d.scanned ?? 0} escaneados · ${d.proposed ?? 0} nuevos · ${d.duplicates ?? 0} dup · ${d.errors ?? 0} err`,
+      );
+      q.refetch();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "sync failed"),
+  });
+
   return (
     <div className="mx-auto max-w-7xl p-4 lg:p-6">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-lg font-semibold">Operations · Reservations</h1>
-        <span className="label-mono">{rows.length} rows</span>
+        <div className="flex items-center gap-3">
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={sync.isPending}
+            onClick={() => sync.mutate()}
+          >
+            <RefreshCw className={`mr-1 h-3 w-3 ${sync.isPending ? "animate-spin" : ""}`} />
+            Sincronizar reservas
+          </Button>
+          <span className="label-mono">{rows.length} rows</span>
+        </div>
       </div>
 
       {/* Filters */}
