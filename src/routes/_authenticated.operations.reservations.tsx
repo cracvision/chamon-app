@@ -73,6 +73,24 @@ function ReservationsPage() {
     [rows],
   );
 
+  const sync = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.functions.invoke("gmail-sync-reservations", {
+        method: "POST",
+        body: {},
+      });
+      if (error) throw error;
+      return data as { ok: boolean; scanned?: number; proposed?: number; duplicates?: number; errors?: number };
+    },
+    onSuccess: (d) => {
+      toast.success(
+        `Sync ok — ${d.scanned ?? 0} escaneados · ${d.proposed ?? 0} nuevos · ${d.duplicates ?? 0} dup · ${d.errors ?? 0} err`,
+      );
+      q.refetch();
+    },
+    onError: (e: any) => toast.error(e?.message ?? "sync failed"),
+  });
+
   return (
     <div className="mx-auto max-w-7xl p-4 lg:p-6">
       <div className="mb-4 flex items-center justify-between">
